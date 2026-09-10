@@ -155,7 +155,9 @@ mod tests {
             GateError::DuplicateSessionId
         );
         assert_eq!(
-            registry.get(&SessionId::new("missing").unwrap()).unwrap_err(),
+            registry
+                .get(&SessionId::new("missing").unwrap())
+                .unwrap_err(),
             GateError::SessionNotFound
         );
     }
