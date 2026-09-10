@@ -1,0 +1,224 @@
+name: Verify vendored Gate baseline
+
+# One-shot baseline verification. Changing this workflow deliberately triggers
+# a new baseline run; the evidence commit itself does not retrigger the job.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/gate-baseline.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gate-baseline
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tavern_baseline
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tavern_baseline"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      UPSTREAM_COMMIT: 6f9158670ee7666bfae2be58b291dafcb45f12e7
+      SOURCE_DIR: third_party/gate-upstream/source
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/tavern_baseline
+      SQLX_OFFLINE: "true"
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Check out Realmforge
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.0 --profile minimal
+          rustup override set 1.97.0 "$SOURCE_DIR"
+          rustc --version
+          cargo --version
+
+      - name: Verify vendored source provenance before build
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qx "upstream_commit=$UPSTREAM_COMMIT" third_party/gate-upstream/SOURCE_REVISION
+          grep -qx "source_snapshot_status=IMPORTED_UNMODIFIED_BASELINE" third_party/gate-upstream/SOURCE_REVISION
+          test -f third_party/gate-upstream/LICENSE.md
+          test -f "$SOURCE_DIR/LICENSE.md"
+          test -f third_party/gate-upstream/SNAPSHOT_MANIFEST.txt
+          test -f third_party/gate-upstream/SNAPSHOT_STATS
+
+          # Baseline verification must not begin from locally modified vendor code.
+          git diff --exit-code -- "$SOURCE_DIR"
+
+      - name: Wait for PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres -d tavern_baseline; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Build and test untouched snapshot
+        id: verify
+        shell: bash
+        run: |
+          set +e
+          mkdir -p docs/evidence/logs/gate-baseline
+
+          (
+            cd "$SOURCE_DIR"
+            cargo build --locked -p account-server -p oauth-server -p bgs-server
+          ) 2>&1 | tee docs/evidence/logs/gate-baseline/build.log
+          build_status=${PIPESTATUS[0]}
+
+          (
+            cd "$SOURCE_DIR"
+            cargo test --locked --workspace --all-targets
+          ) 2>&1 | tee docs/evidence/logs/gate-baseline/test.log
+          test_status=${PIPESTATUS[0]}
+
+          (
+            cd "$SOURCE_DIR"
+            cargo test --locked -p tavern-db migrations_apply_and_round_trip -- --nocapture
+          ) 2>&1 | tee docs/evidence/logs/gate-baseline/db-migration-smoke.log
+          db_status=${PIPESTATUS[0]}
+
+          echo "build_status=$build_status" >> "$GITHUB_OUTPUT"
+          echo "test_status=$test_status" >> "$GITHUB_OUTPUT"
+          echo "db_status=$db_status" >> "$GITHUB_OUTPUT"
+
+          # Do not fail yet; first commit the evidence even if the baseline is broken.
+          exit 0
+
+      - name: Prove baseline run did not modify vendored source
+        id: vendor_diff
+        shell: bash
+        run: |
+          set +e
+          git diff --exit-code -- "$SOURCE_DIR" > docs/evidence/logs/gate-baseline/vendor-diff.log 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Write baseline authority report
+        shell: bash
+        env:
+          BUILD_STATUS: ${{ steps.verify.outputs.build_status }}
+          TEST_STATUS: ${{ steps.verify.outputs.test_status }}
+          DB_STATUS: ${{ steps.verify.outputs.db_status }}
+          VENDOR_DIFF_STATUS: ${{ steps.vendor_diff.outputs.status }}
+        run: |
+          set -euo pipefail
+
+          rust_version="$(rustc +1.97.0 --version)"
+          cargo_version="$(cargo +1.97.0 --version)"
+          postgres_version="$(psql --version)"
+          kernel="$(uname -a)"
+          tracked_files="$(cut -d= -f2 < <(grep '^tracked_files=' third_party/gate-upstream/SNAPSHOT_STATS))"
+          snapshot_bytes="$(cut -d= -f2 < <(grep '^snapshot_bytes=' third_party/gate-upstream/SNAPSHOT_STATS))"
+
+          if [ "$BUILD_STATUS" -eq 0 ] && [ "$TEST_STATUS" -eq 0 ] && [ "$DB_STATUS" -eq 0 ] && [ "$VENDOR_DIFF_STATUS" -eq 0 ]; then
+            overall="PASS"
+          else
+            overall="FAIL"
+          fi
+
+          cat > docs/evidence/GATE_BASELINE_2026-09-09.md <<EOF
+          # Gate Vendored Baseline — 2026-09-09
+
+          **Status:** $overall  
+          **Purpose:** Establish the untouched imported compatibility implementation as a reproducible regression baseline before Realmforge modifies it.
+
+          ## Provenance
+
+          | Field | Value |
+          |---|---|
+          | Upstream | `wowemulation-dev/tavern` |
+          | Upstream commit | `$UPSTREAM_COMMIT` |
+          | Realmforge workflow trigger | `$GITHUB_SHA` |
+          | Vendored tracked files | `$tracked_files` |
+          | Vendored snapshot bytes | `$snapshot_bytes` |
+          | Rust | `$rust_version` |
+          | Cargo | `$cargo_version` |
+          | PostgreSQL client | `$postgres_version` |
+          | Runner | `$kernel` |
+
+          ## Results
+
+          | Gate | Exit code | Result |
+          |---|---:|---|
+          | Build account/oauth/BGS servers | `$BUILD_STATUS` | $([ "$BUILD_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
+          | Full workspace/all-target test suite | `$TEST_STATUS` | $([ "$TEST_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
+          | Explicit DB migration round-trip smoke | `$DB_STATUS` | $([ "$DB_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
+          | Vendored source unchanged by verification | `$VENDOR_DIFF_STATUS` | $([ "$VENDOR_DIFF_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
+
+          ## Evidence logs
+
+          - `docs/evidence/logs/gate-baseline/build.log`
+          - `docs/evidence/logs/gate-baseline/test.log`
+          - `docs/evidence/logs/gate-baseline/db-migration-smoke.log`
+          - `docs/evidence/logs/gate-baseline/vendor-diff.log`
+
+          ## Interpretation
+
+          This report proves only the state of the **pinned inherited implementation** on the recorded CI environment.
+
+          A PASS does **not** mean Realmforge has independently verified a real retired game client or that every upstream support claim is correct. Real-client interoperability remains a separate evidence campaign.
+
+          A FAIL is still useful authority: it records a reproducible inherited-baseline failure before Realmforge integration modifications. Do not silently repair the vendor tree and rewrite history; document any subsequent baseline fix as a covered-source modification.
+
+          ## Modification boundary
+
+          The verification workflow intentionally performs no source edits under `third_party/gate-upstream/source/`.
+
+          `vendor-diff` must remain zero for this report to qualify as an untouched baseline.
+          EOF
+
+      - name: Commit baseline evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Evidence Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/evidence
+          git commit -m "record untouched Gate baseline evidence"
+          git push origin HEAD:main
+
+      - name: Enforce baseline result
+        shell: bash
+        env:
+          BUILD_STATUS: ${{ steps.verify.outputs.build_status }}
+          TEST_STATUS: ${{ steps.verify.outputs.test_status }}
+          DB_STATUS: ${{ steps.verify.outputs.db_status }}
+          VENDOR_DIFF_STATUS: ${{ steps.vendor_diff.outputs.status }}
+        run: |
+          set -euo pipefail
+          test "$BUILD_STATUS" -eq 0
+          test "$TEST_STATUS" -eq 0
+          test "$DB_STATUS" -eq 0
+          test "$VENDOR_DIFF_STATUS" -eq 0
