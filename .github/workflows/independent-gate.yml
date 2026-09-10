@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - rebuild/realmforge-independent-gate
+      - 'rebuild/gate-*'
+    paths:
+      - 'components/gate-independent/**'
+      - 'docs/INDEPENDENT_GATE_REBUILD.md'
+      - '.github/workflows/independent-gate.yml'
   pull_request:
     paths:
       - 'components/gate-independent/**'
