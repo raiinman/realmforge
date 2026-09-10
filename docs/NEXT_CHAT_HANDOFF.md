@@ -1,8 +1,9 @@
 # Realmforge — Next Chat Handoff
 
 **Repository:** `raiinman/realmforge`  
-**Branch authority:** `main`  
-**Current phase:** D0 — project authority / upstream capability inventory / compatibility evidence planning  
+**Main authority:** `main`  
+**Active rebuild branch:** `rebuild/realmforge-gate-foundation`  
+**Current phase:** D0 authority continues in parallel with the first bounded Gate rebuild  
 **Last updated:** 2026-09-09
 
 ## Read first
@@ -13,21 +14,23 @@ Before acting, read in this order:
 2. `docs/PROJECT_CHARTER.md`
 3. `docs/DECISIONS.md`
 4. `docs/ARCHITECTURE.md`
-5. `docs/LEGAL_AND_SOURCE_BOUNDARY.md`
-6. `docs/reconstruction/TAVERN_EXIT_LEDGER.md`
-7. `docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`
-8. `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md`
-9. `docs/ROADMAP.md`
+5. `docs/REALMFORGE_REBUILD_PLAN.md`
+6. `docs/LEGAL_AND_SOURCE_BOUNDARY.md`
+7. `components/gate/REALMFORGE_DERIVATION.md`
+8. `docs/reconstruction/TAVERN_EXIT_LEDGER.md`
+9. `docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`
+10. `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md`
+11. `docs/ROADMAP.md`
 
-Do not replace these with chat memory.
+Do not replace repository authority with chat memory.
 
 ## Owner intent
 
-Realmforge is intended to become a much larger self-hosted realm platform, not a cosmetic fork of an authentication service.
+Realmforge is a self-hosted MMO realm platform, not a cosmetic Tavern fork and not merely an authentication server.
 
-The owner explicitly wants to reuse as much useful existing implementation as legally permitted **now**, while preserving a detailed enough source-independent ledger to independently rebuild important inherited pieces later.
+The owner wants to reuse useful existing implementation where legally permitted **now**, while keeping enough source-independent evidence and reconstruction authority to replace inherited compatibility code later.
 
-The reconstruction requirement is strict:
+The reconstruction requirement remains strict:
 
 > A future implementation engineer should be able to close the inherited source and still know what must be implemented, what remains unknown, how to reproduce the behavior, and how to prove compatibility.
 
@@ -35,7 +38,7 @@ The reconstruction requirement is strict:
 
 - Realmforge owns product identity and operational UX.
 - `Core` owns canonical product state.
-- `Gate` contains client-facing compatibility/authentication concerns.
+- `Gate` contains retired-client compatibility/authentication/session concerns.
 - `Forge` owns realm lifecycle/orchestration.
 - `Bridge` owns emulator adapters.
 - `Client` owns local client discovery/configuration/launch.
@@ -43,166 +46,122 @@ The reconstruction requirement is strict:
 - Compatibility wire formats must not become Core's canonical model.
 - Emulator-specific database/config assumptions must stay behind adapters.
 
-## Important license correction
+## Source and license state
 
-Pinned upstream `wowemulation-dev/tavern` revision:
+Pinned upstream:
 
-`6f9158670ee7666bfae2be58b291dafcb45f12e7`
+- repository: `wowemulation-dev/tavern`
+- commit: `6f9158670ee7666bfae2be58b291dafcb45f12e7`
+- license: `AGPL-3.0-only`
 
-The pinned workspace declares:
+The exact upstream snapshot is now imported and frozen at:
 
-`AGPL-3.0-only`
+`third_party/gate-upstream/source/`
 
-Do not repeat the earlier conversational shorthand `AGPL-3.0-or-later` as repository fact.
+It contains 212 tracked files / 1,562,272 bytes and remains the untouched before/after evidence baseline.
 
-## Upstream state discovered so far
+The active working derivative is:
 
-Pinned upstream workspace contains:
+`components/gate/`
 
-```text
-crates/
-  tavern-account
-  tavern-bgs
-  tavern-core
-  tavern-db
-  tavern-oauth
-  tavern-observability
+That directory is explicitly an **AGPL-3.0-only covered derivative**. Do not describe it as clean-room or independently implemented while upstream-derived code remains.
 
-bin/
-  account-server
-  bgs-server
-  oauth-server
-```
+## Verified baseline
 
-High-value interim areas:
+The untouched imported snapshot has passed its reproducible CI baseline:
 
-- BGS protocol/transport/dispatch,
-- account/game-client login,
-- OAuth proprietary compatibility,
-- shared session/ticket plumbing,
-- Postgres storage needed by Gate,
-- TLS/config/observability needed to run Gate.
+- account/oauth/BGS server build: PASS,
+- full workspace/all-target tests: PASS,
+- PostgreSQL migration round-trip: PASS,
+- frozen vendor source unchanged: PASS.
 
-Avoid importing useless surface merely for file count:
+Baseline workflow run: `34436523285`.
 
-- branding assets,
-- commerce stubs,
-- fake phone/captcha flows,
-- unrelated visual account UI,
-- social placeholders unless a real target consumes them.
+This proves the inherited implementation builds and passes its own tests. It does **not** prove real-client interoperability or establish Realmforge support for any client build.
 
-## Critical upstream conflicts/gaps already found
+## RF-G1 — Realm registry boundary — COMPLETE
 
-### P0 / CONFLICT — BGS v2 status
+The first actual Realmforge rebuild slice is implemented on `rebuild/realmforge-gate-foundation` and CI-green.
 
-`docs/plan.md` claims M0–M19 complete and later-client paths.
+What changed in `components/gate`:
 
-`docs/bgs-protocol-versions.md` still says v1 implemented / v2 planned.
+- introduced `realmforge_realms::RealmRegistry`,
+- removed the hard-coded single `Tavern Realm` from realm-list/join behavior,
+- supports multiple Gate-side realm definitions,
+- realm display name/address/port are configurable,
+- exact build profiles exist for the inherited 31650 and 40618 hypotheses,
+- unknown client builds fail closed by default,
+- an explicit research-only override exists for unknown builds,
+- realm-list payloads are projected from the registry,
+- realm-join resolves the selected realm from that registry,
+- Gate service/metric identity began moving from Tavern to Realmforge,
+- new registry/join regression tests pass,
+- full locked workspace tests pass,
+- the frozen upstream snapshot remains untouched.
 
-No support claim until independently tested.
+Verified rebuild workflow run: `34437936703`.
 
-### P0 / CONFLICT — GenerateAuthToken
+## Important inherited behavior still visible
 
-Plan calls it a stub; pinned BGS source dispatches v2 token-generation requests to an active handler.
+Do not mistake these for final Realmforge policy:
 
-Black-box it.
-
-### P0 — Session resume/restore
-
-Pinned BGS code contains a TODO around SSO token handling for RestoreSession dequeue behavior.
-
-### P0 — MarkSessionAlive
-
-Documented stub/deferred. Must capture real client behavior.
-
-### P0 — browser SSO ticket entry
-
-`GET /login/ticket-login` is documented as observed but not implemented.
-
-### P0 — browser SSO generator
-
-`GET /login/sso/generate` is documented as not implemented.
-
-### P0 — world/realm server half
-
-Upstream stops after pre-realm-join handoff. Realmforge needs an actual adapter/integration through realm-side authentication and gameplay.
-
-### P1 — optional GameUtilities
-
-`GetPlayerVariables` / `GetAchievementsFile` are no-op/unverified.
-
-### P2 / DEFER by default
-
-- friends/presence/clubs,
-- commerce/wallet/store,
-- phone verification,
-- captcha,
-- full 2FA compatibility,
-- other non-game-critical account surfaces.
+- `AuthRealmListTicket` literal remains inherited compatibility behavior,
+- realm join secret remains 32 random bytes,
+- account ID text remains the temporary realm-join ticket,
+- character counts remain empty,
+- last-character metadata remains empty,
+- world/realm-server authentication is still missing,
+- RestoreSession / MarkSessionAlive remain research gaps,
+- BGS v2 support remains conflicting evidence,
+- browser ticket SSO gaps remain open.
 
 ## What has NOT happened yet
 
 Do not claim otherwise:
 
-- No Tavern source has been imported into Realmforge yet.
-- No production Realmforge runtime exists.
-- No Realmforge-wide license has been selected.
-- No emulator adapter has been selected.
-- No real target client has been independently captured by Realmforge.
-- No client build is officially supported by Realmforge.
-- No clean-room replacement implementation exists yet.
+- no Realmforge-wide license has been selected,
+- no emulator adapter has been selected,
+- no real target client has been independently captured by Realmforge,
+- no client build is officially supported by Realmforge,
+- no Bridge/world-auth integration exists,
+- no character-select/world-entry vertical slice exists,
+- no clean-room replacement implementation exists yet,
+- Core ↔ Gate transport/versioning remains undecided.
 
-## Highest-value next step
+## Highest-value next work
 
-Do **one deep upstream code inventory pass** before importing source.
+Do not spend the next pass on a giant cosmetic rename.
 
-Create/extend authority that enumerates:
+Advance the playable path in this order:
 
-1. every upstream HTTP route,
-2. every BGS service hash and method pair,
-3. every protobuf message actually used,
-4. every database migration/table,
-5. every config/environment key,
-6. every listener/port,
-7. every hard-coded build/version rule,
-8. every TODO/FIXME/no-op/stub,
-9. every realm-list/join command,
-10. every test category and synthetic assumption.
+1. repair and normalize baseline/rebuild evidence authority where needed,
+2. finish the Gate configuration surface around the new realm registry,
+3. investigate provenance of the upstream-referenced 1.13.2.31650 interoperability corpus,
+4. compare first emulator adapter candidates and close the adapter decision deliberately,
+5. specify Gate → Bridge/world-auth handoff semantics,
+6. build the first real-client capture fixture,
+7. then connect login → Realmforge realm list → join → emulator world authentication.
 
-Write the result back into `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md` or split large appendices under `docs/research/upstream/`.
-
-## After the deep inventory
-
-Then perform a deliberate source-intake decision:
-
-```text
-KEEP NOW
-REWRITE IMMEDIATELY
-DO NOT IMPORT
-CAPTURE FIRST
-DEFER
-```
-
-for every major upstream subsystem.
-
-Only then import the useful covered source under a clearly marked third-party boundary with exact provenance and required license material.
+RF-G2 product-visible identity cleanup may proceed alongside this work when it does not delay the vertical slice.
 
 ## Do not do these
 
+- Do not edit `third_party/gate-upstream/source/`.
 - Do not rename copied code and call it clean-room.
 - Do not erase legally required provenance.
-- Do not let upstream database types become Realmforge Core.
-- Do not claim BGS v2 is solved from documentation alone.
-- Do not implement social/commerce fluff before client->realm gameplay works.
-- Do not pick a tech stack merely because upstream used Rust.
+- Do not let Gate/Tavern database types become Realmforge Core.
+- Do not claim BGS v2 is solved from inherited documentation.
+- Do not claim 31650 or 40618 support until Realmforge independently reproduces real-client behavior.
+- Do not implement social/commerce fluff before client → realm gameplay works.
+- Do not pick Core/Forge/Client technology merely because Gate is currently Rust.
 - Do not select a project-wide license without owner approval.
-- Do not merge undocumented architecture assumptions into authority.
+- Do not merge the active rebuild branch without owner approval.
 
 ## D0 completion target
 
-D0 can close only after:
+D0 still closes only after:
 
-- upstream inventory is detailed enough for deliberate intake,
+- upstream inventory is sufficiently complete,
 - client/build candidate matrix exists,
 - threat model exists,
 - first emulator comparison exists,
