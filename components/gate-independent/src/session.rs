@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{GateError, IdentitySubject};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -44,11 +46,15 @@ impl GateSession {
     }
 
     pub fn authenticate(&mut self, subject: IdentitySubject) -> Result<(), GateError> {
-        if matches!(self.state, SessionState::Closed) {
-            return Err(GateError::SessionClosed);
+        match &self.state {
+            SessionState::Closed => Err(GateError::SessionClosed),
+            SessionState::Created => {
+                self.state = SessionState::Authenticated(subject);
+                Ok(())
+            }
+            SessionState::Authenticated(existing) if existing == &subject => Ok(()),
+            SessionState::Authenticated(_) => Err(GateError::SessionAlreadyAuthenticated),
         }
-        self.state = SessionState::Authenticated(subject);
-        Ok(())
     }
 
     pub fn close(&mut self) -> Result<(), GateError> {
@@ -64,6 +70,33 @@ impl GateSession {
             SessionState::Authenticated(subject) => Some(subject),
             SessionState::Created | SessionState::Closed => None,
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SessionRegistry {
+    sessions: BTreeMap<SessionId, GateSession>,
+}
+
+impl SessionRegistry {
+    pub fn insert(&mut self, session: GateSession) -> Result<(), GateError> {
+        if self.sessions.contains_key(&session.id) {
+            return Err(GateError::DuplicateSessionId);
+        }
+        self.sessions.insert(session.id.clone(), session);
+        Ok(())
+    }
+
+    pub fn get(&self, id: &SessionId) -> Result<&GateSession, GateError> {
+        self.sessions.get(id).ok_or(GateError::SessionNotFound)
+    }
+
+    pub fn get_mut(&mut self, id: &SessionId) -> Result<&mut GateSession, GateError> {
+        self.sessions.get_mut(id).ok_or(GateError::SessionNotFound)
+    }
+
+    pub fn close(&mut self, id: &SessionId) -> Result<(), GateError> {
+        self.get_mut(id)?.close()
     }
 }
 
@@ -94,5 +127,36 @@ mod tests {
             .authenticate(IdentitySubject::new("user-1").unwrap())
             .unwrap_err();
         assert_eq!(err, GateError::SessionClosed);
+    }
+
+    #[test]
+    fn authenticated_session_cannot_switch_identity() {
+        let mut session = GateSession::new(SessionId::new("s-1").unwrap());
+        session
+            .authenticate(IdentitySubject::new("user-1").unwrap())
+            .unwrap();
+
+        assert_eq!(
+            session
+                .authenticate(IdentitySubject::new("user-2").unwrap())
+                .unwrap_err(),
+            GateError::SessionAlreadyAuthenticated
+        );
+    }
+
+    #[test]
+    fn registry_rejects_duplicate_session_ids_and_missing_sessions() {
+        let mut registry = SessionRegistry::default();
+        let id = SessionId::new("s-1").unwrap();
+        registry.insert(GateSession::new(id.clone())).unwrap();
+
+        assert_eq!(
+            registry.insert(GateSession::new(id.clone())).unwrap_err(),
+            GateError::DuplicateSessionId
+        );
+        assert_eq!(
+            registry.get(&SessionId::new("missing").unwrap()).unwrap_err(),
+            GateError::SessionNotFound
+        );
     }
 }
