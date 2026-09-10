@@ -20,6 +20,7 @@ DIR_RENAMES = {
 REPLACEMENTS = [
     ("https://github.com/wowemulation-dev/tavern", "https://github.com/raiinman/realmforge"),
     ("wowemulation-dev/tavern", "raiinman/realmforge"),
+    ("tavern-logo-monochrome.svg", "realmforge-logo-monochrome.svg"),
     ("tavern-observability", "realmforge-gate-observability"),
     ("tavern-account", "realmforge-gate-account"),
     ("tavern-oauth", "realmforge-gate-oauth"),
@@ -52,6 +53,7 @@ SKIP_BASENAMES = {"LICENSE", "LICENSE.txt", "COPYING", "NOTICE", "NOTICE.md"}
 TRANSPARENT_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/6iZcWQAAAABJRU5ErkJggg=="
 )
+BLANK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>\n'
 
 
 def rename_directories() -> None:
@@ -83,35 +85,46 @@ def rewrite_text_files() -> None:
         new = text
         for old, replacement in REPLACEMENTS:
             new = new.replace(old, replacement)
+        # Clean up semantic names that become nonsense after the mechanical
+        # inherited-name replacement.
+        new = new.replace(
+            "default_registry_is_realmforge_not_realmforge",
+            "default_registry_uses_realmforge_identity",
+        )
         if new != text:
             path.write_text(new, encoding="utf-8")
 
 
 def neutralize_inherited_brand_assets() -> None:
-    static = GATE / "crates" / "realmforge-gate-account" / "static"
-    if not static.exists():
-        return
+    account_static = GATE / "crates" / "realmforge-gate-account" / "static"
+    if account_static.exists():
+        # Delete inherited visual marks instead of laundering them through a
+        # filename change. Product-facing placeholders stay intentionally blank
+        # until native Realmforge art is committed.
+        for name in ("tavern-logo-light.png", "tavern-logo-dark.png"):
+            path = account_static / name
+            if path.exists():
+                path.unlink()
 
-    # Delete the inherited visual marks instead of laundering them through a
-    # filename change. Product-facing placeholders stay intentionally blank
-    # until native Realmforge art is committed.
-    for name in ("tavern-logo-light.png", "tavern-logo-dark.png"):
-        path = static / name
-        if path.exists():
-            path.unlink()
+        for name in (
+            "realmforge-logo-light.png",
+            "realmforge-logo-dark.png",
+            "email-logo-light.png",
+            "email-logo-dark.png",
+        ):
+            (account_static / name).write_bytes(TRANSPARENT_PNG)
 
-    for name in (
-        "realmforge-logo-light.png",
-        "realmforge-logo-dark.png",
-        "email-logo-light.png",
-        "email-logo-dark.png",
-    ):
-        (static / name).write_bytes(TRANSPARENT_PNG)
+        (account_static / "favicon.svg").write_text(BLANK_SVG, encoding="utf-8")
 
-    (static / "favicon.svg").write_text(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>\n',
-        encoding="utf-8",
-    )
+    docs_assets = GATE / "docs" / "assets"
+    if docs_assets.exists():
+        inherited_mark = docs_assets / "tavern-logo-monochrome.svg"
+        if inherited_mark.exists():
+            inherited_mark.unlink()
+        (docs_assets / "realmforge-logo-monochrome.svg").write_text(
+            BLANK_SVG,
+            encoding="utf-8",
+        )
 
     # The inherited test encoded an assumption that the old artwork had to be
     # large. Realmforge intentionally uses blank placeholders here, so the
