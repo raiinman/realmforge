@@ -1,9 +1,4 @@
-use std::{
-    env,
-    fs::OpenOptions,
-    io::Write,
-    path::PathBuf,
-};
+use std::{env, fs::OpenOptions, io::Write, path::PathBuf};
 
 use realmforge_gate_independent::OidcSigningAuthority;
 
