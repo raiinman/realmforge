@@ -44,7 +44,7 @@ Delivered:
 
 Verification: GitHub Actions run `34437936703` completed successfully.
 
-### RF-G2 — Realmforge Gate identity cleanup — NEXT
+### RF-G2 — Realmforge Gate identity cleanup — PARALLEL
 
 Goal: remove product-visible Tavern identity while preserving required legal provenance.
 
@@ -59,17 +59,32 @@ Work:
 
 Internal crate/module renames happen only where they improve maintainability; a giant cosmetic rename is not a milestone.
 
-### RF-G3 — Gate configuration authority
+### RF-G3 — Gate configuration authority — ACTIVE
 
 Goal: stop relying on a loose pile of inherited environment variables.
 
-Work:
+First verified slice:
 
-- typed Realmforge Gate config,
-- compatibility profile config,
-- secrets references,
-- validation and startup diagnostics,
-- legacy env aliases only where migration value justifies them.
+- introduced typed `realmforge_config::GateConfig` for the BGS process,
+- Realmforge-prefixed runtime variables are authoritative,
+- inherited names remain migration aliases only,
+- use of legacy aliases is visible at startup,
+- listener addresses, login capacity, worker count, database URL, and TLS pair are validated centrally,
+- TLS cert/key must be supplied together,
+- runtime defaults preserve the inherited compatibility ports,
+- configuration contract documented in `components/gate/REALMFORGE_CONFIG.md`,
+- full locked workspace tests remain green,
+- pinned upstream baseline remains untouched.
+
+Verification: GitHub Actions run `34438409222` completed successfully.
+
+Remaining RF-G3 work:
+
+- database-pool environment names,
+- account-server configuration surface,
+- OAuth-server configuration surface,
+- secret references/rotation policy,
+- eventual replacement of local realm JSON/file loading by the Core ↔ Gate contract.
 
 ### RF-G4 — Core ↔ Gate contract
 
@@ -162,14 +177,13 @@ Everything before that should serve this path or prove a boundary needed by it.
 
 ## 5. Current attack list
 
-RF-G1 is green. The next highest-value work is:
+RF-G1 is complete and RF-G3 has begun. The next highest-value work is:
 
-1. repair/normalize the baseline evidence report metadata,
-2. finish the Gate config surface inventory against the new registry,
-3. investigate the upstream-referenced 1.13.2.31650 interoperability research corpus and its provenance,
-4. compare first emulator adapter candidates,
-5. close the first adapter decision deliberately,
-6. specify the world-auth handoff contract,
-7. build the first real-client capture fixture.
+1. investigate the upstream-referenced 1.13.2.31650 interoperability research corpus and its provenance,
+2. compare first emulator adapter candidates,
+3. close the first adapter decision deliberately,
+4. specify the Gate → Bridge/world-auth handoff contract,
+5. build the first real-client capture fixture,
+6. continue account/OAuth configuration cleanup where it directly supports that path.
 
-RF-G2 branding/identity cleanup can proceed in parallel, but it must not delay world-auth progress.
+RF-G2 branding/identity cleanup continues in parallel, but it must not delay world-auth progress.
