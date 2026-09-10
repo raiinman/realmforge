@@ -19,7 +19,7 @@ The original pinned source remains untouched under `third_party/gate-upstream/so
 4. Realmforge product state must not become coupled to Tavern-specific database or wire-protocol structures.
 5. New product behavior should move toward the Core/Gate contract documented in `docs/ARCHITECTURE.md`.
 
-## RF-G1 — first Realmforge production slice
+## RF-G1 — Realm registry boundary
 
 **Status:** COMPLETE and CI-verified.
 
@@ -47,6 +47,29 @@ Verification workflow run `34437936703` completed successfully with:
 - full locked workspace/all-target test suite passing,
 - PostgreSQL 16 available for integration tests.
 
+## RF-G3 — typed Gate configuration
+
+**Status:** ACTIVE; first BGS process slice CI-verified.
+
+The BGS process now routes its core runtime settings through `realmforge_config::GateConfig` instead of reading unrelated inherited environment variables throughout startup.
+
+Realmforge-prefixed settings take precedence. Legacy names remain migration aliases only and their use is logged.
+
+The first typed configuration slice covers:
+
+- PostgreSQL URL for the current Gate derivative,
+- WebSocket bind address,
+- raw TCP/TLS bind address,
+- maximum BGS login capacity,
+- Tokio worker count,
+- TLS certificate/key pair validation.
+
+The contract is documented in `REALMFORGE_CONFIG.md`.
+
+Verification workflow run `34438409222` completed successfully with the frozen upstream baseline unchanged and the full locked workspace/all-target test suite passing.
+
+RF-G3 remains open for DB-pool variables plus account-server/OAuth-server configuration surfaces.
+
 ## Known inherited behavior still present
 
 The following code remains upstream-derived compatibility behavior and is intentionally visible as replacement work:
@@ -64,4 +87,4 @@ None of those should be promoted into Realmforge Core policy merely because Gate
 
 ## Next Gate work
 
-RF-G2 focuses on product-visible Realmforge identity and RF-G3 on typed configuration authority. In parallel, the higher-value playable-path work is first-emulator selection and the Gate → Bridge/world-auth contract.
+RF-G2 continues product-visible Realmforge identity cleanup while RF-G3 continues configuration migration. The higher-value playable-path work is first-emulator selection and the Gate → Bridge/world-auth contract.
