@@ -23,7 +23,10 @@ pub use account::{
 };
 pub use authorization_code::{AuthorizationCode, AuthorizationCodeStore};
 pub use error::GateError;
-pub use http::{HealthResponse, gate_http_router};
+pub use http::{
+    AccessTokenResponse, GATE_SESSION_COOKIE, GateHttpState, HealthResponse, gate_http_router,
+    gate_http_router_with_state,
+};
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
 pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
 pub use oauth_client::{OAuthClient, OAuthClientRegistry};
