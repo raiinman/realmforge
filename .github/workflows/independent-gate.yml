@@ -42,6 +42,43 @@ jobs:
         run: cargo +1.97.0 test --manifest-path components/gate-independent/Cargo.toml
       - name: Build standalone Gate processes
         run: cargo +1.97.0 build --manifest-path components/gate-independent/Cargo.toml --bins
+      - name: Smoke capture bundle initializer
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/realmforge-capture-init-smoke
+          "$CARGO_TARGET_DIR/debug/realmforge-gate-capture-init" \
+            --out /tmp/realmforge-capture-init-smoke \
+            --id synthetic-capture-init-001 \
+            --family synthetic \
+            --version 0 \
+            --build 1 \
+            --platform linux \
+            --arch x86_64 \
+            --exe /bin/true \
+            --os 'GitHub Actions Ubuntu' \
+            --topology 'loopback synthetic test' \
+            --server-revision ci \
+            --scenario 'capture initializer smoke test' \
+            --expected 'emit hashed first-party seed manifest' \
+            > /tmp/capture-init.out
+
+          test -s /tmp/realmforge-capture-init-smoke/manifest.json
+          grep -F 'capture_id=synthetic-capture-init-001' /tmp/capture-init.out
+          grep -E 'client_sha256=[0-9a-f]{64}' /tmp/capture-init.out
+          grep -F 'implementation_ready=false' /tmp/capture-init.out
+          grep -F '"evidence_grade": "first_party"' /tmp/realmforge-capture-init-smoke/manifest.json
+          grep -F '"observations": []' /tmp/realmforge-capture-init-smoke/manifest.json
+
+          "$CARGO_TARGET_DIR/debug/realmforge-gate-fixture-check" \
+            /tmp/realmforge-capture-init-smoke/manifest.json
+
+          if "$CARGO_TARGET_DIR/debug/realmforge-gate-fixture-check" \
+            /tmp/realmforge-capture-init-smoke/manifest.json --implementation-ready; then
+            echo 'seed manifest unexpectedly became implementation-ready without observations' >&2
+            exit 1
+          fi
+
       - name: Smoke standalone Gate HTTP surface
         shell: bash
         run: |
