@@ -1,0 +1,53 @@
+{
+  "realms": [
+    {
+      "id": "alpha",
+      "displayName": "RealmForge Alpha",
+      "publicAddress": "127.0.0.1",
+      "gamePort": 8085,
+      "region": 1,
+      "site": 1,
+      "realmIndex": 1,
+      "addressFlags": 0,
+      "timezoneId": 1,
+      "populationState": 1,
+      "categoryId": 1,
+      "configId": 1,
+      "languageId": 1,
+      "realmFlags": 0,
+      "supportedBuilds": [31650, 40618]
+    },
+    {
+      "id": "beta",
+      "displayName": "RealmForge Beta",
+      "publicAddress": "127.0.0.1",
+      "gamePort": 8086,
+      "region": 1,
+      "site": 1,
+      "realmIndex": 2,
+      "addressFlags": 0,
+      "timezoneId": 1,
+      "populationState": 1,
+      "categoryId": 1,
+      "configId": 1,
+      "languageId": 1,
+      "realmFlags": 0,
+      "supportedBuilds": [31650]
+    }
+  ],
+  "buildProfiles": {
+    "31650": {
+      "major": 1,
+      "minor": 13,
+      "revision": 2,
+      "build": 31650
+    },
+    "40618": {
+      "major": 1,
+      "minor": 14,
+      "revision": 0,
+      "build": 40618
+    }
+  },
+  "allowUnknownBuilds": false
+}
