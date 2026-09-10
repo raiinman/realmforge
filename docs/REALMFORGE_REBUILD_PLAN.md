@@ -1,96 +1,90 @@
 # Realmforge Rebuild Plan
 
 **Status:** ACTIVE  
-**Branch:** `rebuild/realmforge-gate-foundation`  
-**Purpose:** Turn the useful inherited compatibility implementation into the first functioning Realmforge subsystem without letting inherited architecture define the product.
+**Current integration branch:** `rebuild/realmforge-bridge-world-auth`  
+**Purpose:** Turn useful inherited compatibility behavior into a functioning Realmforge stack while steadily removing inherited product identity and implementation ownership.
 
 ## 1. Non-negotiable boundaries
 
-- `third_party/gate-upstream/source/` is the frozen upstream evidence baseline.
-- `components/gate/` is the current AGPL-covered working derivative.
-- Realmforge Core's canonical models must not become aliases for BGS protobufs, Tavern database rows, or emulator SQL.
-- Unknown client behavior remains explicit.
-- Real-client evidence outranks inherited documentation.
-- Covered-source refactors remain covered-source refactors; they are not called clean-room replacements.
+- `third_party/gate-upstream/source/` is the frozen upstream evidence baseline and is not production identity.
+- `components/gate/` is the current AGPL-covered working derivative until inherited internals are independently replaced.
+- exact upstream naming/provenance belongs only in explicit legal/provenance authority while derived code remains.
+- Realmforge Core models must never become aliases for compatibility protobufs, inherited database rows, or emulator SQL.
+- emulator-specific storage/configuration stays behind Bridge.
+- unknown client behavior remains explicit.
+- real-client evidence outranks inherited documentation.
+- covered-source refactors are not called clean-room replacements.
 
 ## 2. Rebuild sequence
 
 ### RF-G0 — Baseline and quarantine — COMPLETE
 
-- exact upstream commit pinned,
+- exact upstream revision pinned,
 - complete source snapshot imported,
 - AGPL boundary preserved,
 - snapshot manifest recorded,
 - untouched build/test/database baseline passed,
-- working derivative created separately under `components/gate/`.
+- working derivative separated under `components/gate/`.
+
+Baseline verification: `34436523285` — PASS.
 
 ### RF-G1 — Realmforge realm registry boundary — COMPLETE
 
-Goal: remove the single hard-coded Tavern realm from BGS realm-list/join behavior.
-
 Delivered:
 
-- Realmforge Gate realm registry module,
+- dynamic Realmforge Gate realm registry,
 - configurable display name/address/port,
 - multiple realm definitions,
-- explicit per-build compatibility profiles,
+- explicit build compatibility profiles,
 - unknown builds fail closed by default,
-- realm-list projection generated from registry,
-- realm-join target resolved from registry,
-- Gate metrics/service identity began moving to Realmforge,
-- regression tests preserving inherited wire behavior,
-- full locked workspace tests pass,
-- pinned upstream baseline remains untouched.
+- realm-list projection from registry,
+- realm-join target resolution from registry,
+- regression coverage,
+- frozen baseline unchanged.
 
-Verification: GitHub Actions run `34437936703` completed successfully.
+Verification: `34437936703` — PASS.
 
-### RF-G2 — Realmforge Gate identity cleanup — PARALLEL
+### RF-G2 — Active Gate product-identity exit — COMPLETE ON PR #2
 
-Goal: remove product-visible Tavern identity while preserving required legal provenance.
+The active Gate tree has completed its first inherited-product-identity removal pass:
 
-Work:
+- crates and binaries use `realmforge-gate-*` identity,
+- active source/package metadata/logs/docs/templates no longer carry inherited product naming outside explicit provenance/license files,
+- inherited logos were removed rather than renamed,
+- intentionally blank Realmforge placeholders remain until native Realmforge visual assets are authored,
+- reconstruction authority now uses `UPSTREAM_EXIT_LEDGER.md`,
+- full workspace/all-target tests pass after the rename,
+- a second `--locked` workspace pass succeeds,
+- frozen upstream source remains unchanged.
 
-- user-facing account/login branding,
-- service/log/metric names,
-- configuration names,
-- deployment/container names,
-- local test identities,
-- documentation entrypoints.
+Verification: `34439890791` — PASS.  
+Open integration PR: `#2`.
 
-Internal crate/module renames happen only where they improve maintainability; a giant cosmetic rename is not a milestone.
+This is product/package identity cleanup of covered code, not a clean-room claim. Replacement of inherited internals continues under RF-G7.
 
 ### RF-G3 — Gate configuration authority — ACTIVE
 
-Goal: stop relying on a loose pile of inherited environment variables.
+Verified BGS slice:
 
-First verified slice:
+- typed `realmforge_config::GateConfig`,
+- `REALMFORGE_GATE_*` variables authoritative,
+- inherited names migration aliases only,
+- alias use logged,
+- listener/capacity/worker/database/TLS validation centralized.
 
-- introduced typed `realmforge_config::GateConfig` for the BGS process,
-- Realmforge-prefixed runtime variables are authoritative,
-- inherited names remain migration aliases only,
-- use of legacy aliases is visible at startup,
-- listener addresses, login capacity, worker count, database URL, and TLS pair are validated centrally,
-- TLS cert/key must be supplied together,
-- runtime defaults preserve the inherited compatibility ports,
-- configuration contract documented in `components/gate/REALMFORGE_CONFIG.md`,
-- full locked workspace tests remain green,
-- pinned upstream baseline remains untouched.
+Verification: `34438409222` — PASS.
 
-Verification: GitHub Actions run `34438409222` completed successfully.
+Remaining:
 
-Remaining RF-G3 work:
-
-- database-pool environment names,
-- account-server configuration surface,
-- OAuth-server configuration surface,
+- database-pool settings,
+- account-server configuration,
+- OAuth-server configuration,
 - secret references/rotation policy,
-- eventual replacement of local realm JSON/file loading by the Core ↔ Gate contract.
+- replace local realm JSON/file loading when Core ↔ Gate service transport closes.
 
-### RF-G4 — Core ↔ Gate contract
+### RF-G4 — Core ↔ Gate semantic contract — OPEN
 
-Goal: make Gate consume Realmforge semantic state rather than owning product state.
-
-Minimum contract:
+Minimum semantics remain:
 
 ```text
 AuthenticateIdentity
@@ -101,89 +95,102 @@ IssueRealmJoin
 DisconnectSession
 ```
 
-This milestone must resolve P-011 before implementation locks the transport.
+P-011 still blocks choosing the permanent transport/versioning mechanism. Do not let that block language-neutral contracts or test fixtures.
 
-### RF-G5 — Bridge/world-auth completion
+### RF-G5 — Bridge/world-auth completion — ACTIVE
 
-Goal: cross the boundary Tavern never crossed: client login through actual world-server authentication.
+First adapter target is locked by D-0019:
 
-Work:
+**TrinityCoreClassic 1.14.0.40618 family**.
 
-- first emulator adapter selection,
-- realm registration,
-- join-ticket consumption,
-- join-secret/session-key handoff,
-- character counts / last-character integration where useful,
-- end-to-end login → realm list → realm join → world auth fixture.
+World-auth evidence establishes the first concrete handoff:
 
-### RF-G6 — Real-client compatibility matrix
+```text
+Realmforge game account
+        |
+        v
+Bridge emulator account projection
+        |
+        +--> joinTicket = emulator account.username
+        |
+        +--> install Gate/client 64-byte session key
+             into emulator account.session_key_bnet
+        |
+        v
+Gate returns realm join response
+        |
+        v
+40618 client connects to world server
+        |
+        v
+world server validates CMSG_AUTH_SESSION
+```
 
-Goal: replace inherited support claims with Realmforge evidence.
+Observed emulator behavior transitions `session_key_bnet` from the 64-byte pre-world-auth BGS key to a derived 40-byte continued-session key after successful authentication. Bridge must treat preparation as a point-in-time handoff and must not continuously reconcile the original 64-byte value afterward.
 
-For every supported build:
+Language-neutral contracts now live under `contracts/bridge/` and adapter authority under `docs/bridge/`.
+
+Next implementation proof:
+
+- resolve/link one test Realmforge game account to one emulator account projection,
+- prepare a 64-byte world join,
+- prove Gate emits the same key Bridge installed,
+- prove the real 40618 client reaches character screen/world entry,
+- capture reconnect/invalidation evidence.
+
+### RF-G6 — Real-client compatibility matrix — OPEN
+
+No build is supported merely because code or emulator documentation claims it.
+
+For every supported build capture:
 
 - exact binary/build identity,
-- transport path,
-- login path,
+- transport/login path,
 - BGS service/method trace,
 - realm-list fixture,
 - realm-join fixture,
-- disconnect/error behavior,
-- reconnect behavior,
 - world-auth success,
-- regression capture.
+- disconnect/reconnect behavior,
+- regression evidence.
 
-### RF-G7 — Replace inherited Gate internals
+40618 is first in line. 31650 remains research-only until separately reproduced.
 
-Goal: progressively remove upstream-derived implementation where the reconstruction ledger is sufficient.
+### RF-G7 — Replace inherited Gate internals — ACTIVE IN PARALLEL
 
-Replacement order should be driven by architectural leverage, not cosmetics. The likely late replacement is BGS transport/RPC because it carries the most compatibility value and the least product identity.
+Continue replacing covered internals behind behavior tests. The goal is to shrink the legal/provenance quarantine until the inherited implementation can be removed entirely.
 
-## 3. Parallel product tracks
+Replacement order follows architectural leverage rather than filename cosmetics. Protocol transport/RPC may remain late because it contains high compatibility value but little product policy.
 
-Gate is only one part of Realmforge. The following tracks remain separate and must not be improvised from Gate's internals:
-
-```text
-Core     canonical state/control API
-Forge    realm lifecycle/orchestration
-Bridge   emulator adapters
-Client   local client discovery/configuration/launch
-Console  administrator UX
-```
-
-Their implementation languages/frameworks remain open until their own decisions close.
-
-## 4. First playable vertical slice
-
-The first meaningful Realmforge success criterion is not “the UI loads.” It is:
+## 3. First playable vertical slice
 
 ```text
 Realmforge config knows one realm
         ↓
-Gate authenticates a known test account
+Gate authenticates a known Realmforge test account
         ↓
 client receives Realmforge realm list
         ↓
-client selects Realmforge realm
+client selects realm
         ↓
-Gate issues a join handoff
+Bridge prepares emulator account + world-auth key
         ↓
-Bridge/emulator accepts world authentication
+Gate emits join ticket/session material
+        ↓
+emulator accepts CMSG_AUTH_SESSION
         ↓
 character screen/world entry succeeds
 ```
 
-Everything before that should serve this path or prove a boundary needed by it.
+That is the first meaningful success criterion. A UI loading is not.
 
-## 5. Current attack list
+## 4. Current attack list
 
-RF-G1 is complete and RF-G3 has begun. The next highest-value work is:
+1. finish Bridge semantic authority and adapter fixture for 40618,
+2. implement/test a linked-account world-auth preparation path without leaking emulator SQL into Gate,
+3. build the first real-client capture fixture,
+4. prove login → realm list → join → world auth end to end,
+5. capture failure/reconnect/invalidation semantics,
+6. continue account/OAuth config migration where it supports the vertical slice,
+7. continue removing inherited implementation and non-provenance naming as touched.
 
-1. investigate the upstream-referenced 1.13.2.31650 interoperability research corpus and its provenance,
-2. compare first emulator adapter candidates,
-3. close the first adapter decision deliberately,
-4. specify the Gate → Bridge/world-auth handoff contract,
-5. build the first real-client capture fixture,
-6. continue account/OAuth configuration cleanup where it directly supports that path.
-
-RF-G2 branding/identity cleanup continues in parallel, but it must not delay world-auth progress.
+Do not pause the playable path for a repo-wide cosmetic sweep. Remove inherited identity and code ownership **as each area is touched**, while retaining only the minimum explicit legal/provenance record until replacement is complete.
