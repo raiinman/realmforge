@@ -47,9 +47,9 @@ impl PkceCodeVerifier {
     pub fn new(value: impl Into<String>) -> Result<Self, GateError> {
         let value = value.into();
         let len = value.len();
-        let valid_charset = value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~')
-        });
+        let valid_charset = value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~'));
 
         if !(43..=128).contains(&len) || !valid_charset {
             return Err(GateError::InvalidPkceVerifier);
@@ -75,7 +75,11 @@ impl PkceS256Challenge {
 
     pub fn new(value: impl Into<String>) -> Result<Self, GateError> {
         let value = value.into();
-        if value.is_empty() || !value.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_')) {
+        if value.is_empty()
+            || !value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+        {
             return Err(GateError::InvalidPkceChallenge);
         }
         Ok(Self(value))
@@ -210,12 +214,17 @@ mod tests {
         let mut grant = grant();
 
         assert_eq!(
-            grant.redeem(150, &client, &redirect, &verifier).unwrap().as_str(),
+            grant
+                .redeem(150, &client, &redirect, &verifier)
+                .unwrap()
+                .as_str(),
             "subject-1"
         );
         assert!(grant.is_consumed());
         assert_eq!(
-            grant.redeem(151, &client, &redirect, &verifier).unwrap_err(),
+            grant
+                .redeem(151, &client, &redirect, &verifier)
+                .unwrap_err(),
             GateError::AuthorizationGrantConsumed
         );
     }
@@ -228,7 +237,9 @@ mod tests {
 
         let mut expired = grant();
         assert_eq!(
-            expired.redeem(200, &client, &redirect, &verifier).unwrap_err(),
+            expired
+                .redeem(200, &client, &redirect, &verifier)
+                .unwrap_err(),
             GateError::AuthorizationGrantExpired
         );
 
