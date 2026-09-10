@@ -40,14 +40,25 @@ jobs:
         run: cargo +1.97.0 fmt --manifest-path components/gate-independent/Cargo.toml -- --check
       - name: Test independent Gate foundation
         run: cargo +1.97.0 test --manifest-path components/gate-independent/Cargo.toml
-      - name: Build standalone Gate process
-        run: cargo +1.97.0 build --manifest-path components/gate-independent/Cargo.toml --bin realmforge-gate
+      - name: Build standalone Gate processes
+        run: cargo +1.97.0 build --manifest-path components/gate-independent/Cargo.toml --bins
       - name: Smoke standalone Gate HTTP surface
         shell: bash
         run: |
           set -euo pipefail
           export REALMFORGE_GATE_BIND=127.0.0.1:18080
           export REALMFORGE_GATE_ISSUER=http://127.0.0.1:18080
+
+          if "$CARGO_TARGET_DIR/debug/realmforge-gate" > /tmp/missing-key.log 2>&1; then
+            echo 'Gate unexpectedly started without REALMFORGE_GATE_SIGNING_KEY' >&2
+            exit 1
+          fi
+          grep -F 'REALMFORGE_GATE_SIGNING_KEY' /tmp/missing-key.log
+
+          "$CARGO_TARGET_DIR/debug/realmforge-gate-keygen" /tmp/realmforge-gate-signing.pem
+          test "$(stat -c '%a' /tmp/realmforge-gate-signing.pem)" = "600"
+          export REALMFORGE_GATE_SIGNING_KEY=/tmp/realmforge-gate-signing.pem
+
           "$CARGO_TARGET_DIR/debug/realmforge-gate" > /tmp/realmforge-gate.log 2>&1 &
           gate_pid=$!
           cleanup() {
@@ -70,7 +81,16 @@ jobs:
           grep -F '"issuer":"http://127.0.0.1:18080"' /tmp/discovery.json
           grep -F '"authorization_endpoint":"http://127.0.0.1:18080/authorize"' /tmp/discovery.json
           grep -F '"token_endpoint":"http://127.0.0.1:18080/token"' /tmp/discovery.json
+          grep -F '"jwks_uri":"http://127.0.0.1:18080/jwks.json"' /tmp/discovery.json
           grep -F '"code_challenge_methods_supported":["S256"]' /tmp/discovery.json
+
+          curl -fsS http://127.0.0.1:18080/jwks.json > /tmp/jwks.json
+          grep -F '"kty":"RSA"' /tmp/jwks.json
+          grep -F '"use":"sig"' /tmp/jwks.json
+          grep -F '"alg":"RS256"' /tmp/jwks.json
+          grep -E '"kid":"[A-Za-z0-9_-]{43}"' /tmp/jwks.json
+          grep -E '"n":"[A-Za-z0-9_-]+"' /tmp/jwks.json
+          grep -E '"e":"[A-Za-z0-9_-]+"' /tmp/jwks.json
 
           authorize_status=$(curl -sS -o /tmp/authorize.json -w '%{http_code}' \
             'http://127.0.0.1:18080/authorize?response_type=code&client_id=client-1&redirect_uri=https%3A%2F%2Fclient.example%2Fcallback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256')
