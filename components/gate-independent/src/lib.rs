@@ -30,7 +30,10 @@ pub use http::{
     gate_http_router_with_state,
 };
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
-pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
+pub use oauth::{
+    AuthorizationGrant, ClientId, OidcAuthorizationContext, PkceCodeVerifier, PkceS256Challenge,
+    RedeemedAuthorizationGrant, RedirectUri,
+};
 pub use oauth_client::{OAuthClient, OAuthClientRegistry};
 pub use oauth_service::{
     AuthorizationRequest, AuthorizationResult, OAuthService, TokenExchangeRequest, TokenResponse,

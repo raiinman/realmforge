@@ -94,6 +94,25 @@ impl PkceS256Challenge {
     }
 }
 
+/// OIDC-only state that must survive authorization-code issuance and redemption.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OidcAuthorizationContext {
+    pub nonce: Option<String>,
+}
+
+impl OidcAuthorizationContext {
+    pub fn new(nonce: Option<String>) -> Self {
+        Self { nonce }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RedeemedAuthorizationGrant {
+    pub subject: IdentitySubject,
+    pub client_id: ClientId,
+    pub oidc: Option<OidcAuthorizationContext>,
+}
+
 /// Protocol-neutral authorization-code state derived from OAuth 2.0 + PKCE.
 ///
 /// The opaque authorization-code string itself belongs to a storage/transport
@@ -107,6 +126,7 @@ pub struct AuthorizationGrant {
     pub pkce_challenge: PkceS256Challenge,
     pub issued_at_unix: u64,
     pub expires_at_unix: u64,
+    oidc: Option<OidcAuthorizationContext>,
     consumed: bool,
 }
 
@@ -130,8 +150,14 @@ impl AuthorizationGrant {
             pkce_challenge,
             issued_at_unix,
             expires_at_unix,
+            oidc: None,
             consumed: false,
         })
+    }
+
+    pub fn with_oidc_context(mut self, context: OidcAuthorizationContext) -> Self {
+        self.oidc = Some(context);
+        self
     }
 
     pub fn is_consumed(&self) -> bool {
@@ -145,6 +171,18 @@ impl AuthorizationGrant {
         redirect_uri: &RedirectUri,
         verifier: &PkceCodeVerifier,
     ) -> Result<IdentitySubject, GateError> {
+        Ok(self
+            .redeem_full(now_unix, client_id, redirect_uri, verifier)?
+            .subject)
+    }
+
+    pub fn redeem_full(
+        &mut self,
+        now_unix: u64,
+        client_id: &ClientId,
+        redirect_uri: &RedirectUri,
+        verifier: &PkceCodeVerifier,
+    ) -> Result<RedeemedAuthorizationGrant, GateError> {
         if self.consumed {
             return Err(GateError::AuthorizationGrantConsumed);
         }
@@ -162,7 +200,11 @@ impl AuthorizationGrant {
         }
 
         self.consumed = true;
-        Ok(self.subject.clone())
+        Ok(RedeemedAuthorizationGrant {
+            subject: self.subject.clone(),
+            client_id: self.client_id.clone(),
+            oidc: self.oidc.clone(),
+        })
     }
 }
 
@@ -227,6 +269,22 @@ mod tests {
                 .unwrap_err(),
             GateError::AuthorizationGrantConsumed
         );
+    }
+
+    #[test]
+    fn oidc_context_survives_successful_redemption() {
+        let verifier = PkceCodeVerifier::new(RFC_VERIFIER).unwrap();
+        let client = ClientId::new("client-1").unwrap();
+        let redirect = RedirectUri::new("https://client.example/callback").unwrap();
+        let mut grant =
+            grant().with_oidc_context(OidcAuthorizationContext::new(Some("nonce-1".to_owned())));
+
+        let redeemed = grant
+            .redeem_full(150, &client, &redirect, &verifier)
+            .unwrap();
+        assert_eq!(redeemed.subject.as_str(), "subject-1");
+        assert_eq!(redeemed.client_id.as_str(), "client-1");
+        assert_eq!(redeemed.oidc.unwrap().nonce.as_deref(), Some("nonce-1"));
     }
 
     #[test]

@@ -1,6 +1,7 @@
 use crate::{
     AccessToken, AccessTokenStore, AuthorizationCode, AuthorizationCodeStore, ClientId, GateError,
-    IdentitySubject, OAuthClientRegistry, PkceCodeVerifier, PkceS256Challenge, RedirectUri,
+    IdentitySubject, OAuthClientRegistry, OidcAuthorizationContext, PkceCodeVerifier,
+    PkceS256Challenge, RedirectUri,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,6 +10,7 @@ pub struct AuthorizationRequest {
     pub redirect_uri: RedirectUri,
     pub pkce_challenge: PkceS256Challenge,
     pub state: Option<String>,
+    pub oidc: Option<OidcAuthorizationContext>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +33,9 @@ pub struct TokenResponse {
     pub access_token: AccessToken,
     pub token_type: &'static str,
     pub expires_in: u64,
+    pub subject: IdentitySubject,
+    pub client_id: ClientId,
+    pub oidc: Option<OidcAuthorizationContext>,
 }
 
 impl std::fmt::Debug for TokenResponse {
@@ -39,6 +44,9 @@ impl std::fmt::Debug for TokenResponse {
             .field("access_token", &"[REDACTED]")
             .field("token_type", &self.token_type)
             .field("expires_in", &self.expires_in)
+            .field("subject", &self.subject)
+            .field("client_id", &self.client_id)
+            .field("oidc", &self.oidc)
             .finish()
     }
 }
@@ -89,7 +97,7 @@ impl OAuthService {
         let expires_at_unix = now_unix
             .checked_add(self.code_lifetime_seconds)
             .ok_or(GateError::InvalidAuthorizationGrantLifetime)?;
-        let grant = self.clients.create_authorization_grant(
+        let mut grant = self.clients.create_authorization_grant(
             subject,
             request.client_id,
             request.redirect_uri.clone(),
@@ -97,6 +105,9 @@ impl OAuthService {
             now_unix,
             expires_at_unix,
         )?;
+        if let Some(oidc) = request.oidc {
+            grant = grant.with_oidc_context(oidc);
+        }
         let code = self.codes.issue(grant);
 
         Ok(AuthorizationResult {
@@ -111,21 +122,26 @@ impl OAuthService {
         request: TokenExchangeRequest,
         now_unix: u64,
     ) -> Result<TokenResponse, GateError> {
-        let subject = self.codes.redeem(
+        let redeemed = self.codes.redeem_full(
             &request.code,
             now_unix,
             &request.client_id,
             &request.redirect_uri,
             &request.verifier,
         )?;
-        let access_token =
-            self.tokens
-                .issue(subject, now_unix, self.access_token_lifetime_seconds)?;
+        let access_token = self.tokens.issue(
+            redeemed.subject.clone(),
+            now_unix,
+            self.access_token_lifetime_seconds,
+        )?;
 
         Ok(TokenResponse {
             access_token,
             token_type: "Bearer",
             expires_in: self.access_token_lifetime_seconds,
+            subject: redeemed.subject,
+            client_id: redeemed.client_id,
+            oidc: redeemed.oidc,
         })
     }
 
@@ -164,6 +180,7 @@ mod tests {
             redirect_uri: RedirectUri::new("https://client.example/callback").unwrap(),
             pkce_challenge: PkceS256Challenge::from_verifier(verifier),
             state: Some("opaque-client-state".to_owned()),
+            oidc: None,
         }
     }
 
@@ -194,6 +211,9 @@ mod tests {
 
         assert_eq!(token.token_type, "Bearer");
         assert_eq!(token.expires_in, 3600);
+        assert_eq!(token.subject.as_str(), "subject-1");
+        assert_eq!(token.client_id.as_str(), "client-1");
+        assert!(token.oidc.is_none());
         assert_eq!(
             service
                 .resolve_access_token(&token.access_token, 111)
@@ -201,6 +221,30 @@ mod tests {
                 .as_str(),
             "subject-1"
         );
+    }
+
+    #[test]
+    fn oidc_context_survives_authorization_and_exchange() {
+        let verifier = PkceCodeVerifier::new(VERIFIER).unwrap();
+        let mut service = service();
+        let mut request = authorization_request(&verifier);
+        request.oidc = Some(OidcAuthorizationContext::new(Some("nonce-1".to_owned())));
+        let result = service
+            .authorize_authenticated(IdentitySubject::new("subject-1").unwrap(), request, 100)
+            .unwrap();
+
+        let token = service
+            .exchange_authorization_code(
+                TokenExchangeRequest {
+                    code: result.code,
+                    client_id: ClientId::new("client-1").unwrap(),
+                    redirect_uri: RedirectUri::new("https://client.example/callback").unwrap(),
+                    verifier,
+                },
+                110,
+            )
+            .unwrap();
+        assert_eq!(token.oidc.unwrap().nonce.as_deref(), Some("nonce-1"));
     }
 
     #[test]
@@ -294,6 +338,7 @@ mod tests {
             redirect_uri: RedirectUri::new("https://evil.example/callback").unwrap(),
             pkce_challenge: PkceS256Challenge::from_verifier(&verifier),
             state: None,
+            oidc: None,
         };
         assert_eq!(
             service

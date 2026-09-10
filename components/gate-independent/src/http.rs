@@ -12,12 +12,14 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    AuthorizationCode, AuthorizationRequest, ClientId, GateError, JsonWebKeySet,
-    OAuthClientRegistry, OAuthService, OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge,
-    ProviderMetadata, RedirectUri, SessionId, SessionRegistry, TokenExchangeRequest,
+    AuthorizationCode, AuthorizationRequest, ClientId, GateError, IdTokenIssuer, Issuer,
+    JsonWebKeySet, OAuthClientRegistry, OAuthService, OidcAuthorizationContext,
+    OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge, ProviderMetadata, RedirectUri,
+    SessionId, SessionRegistry, TokenExchangeRequest,
 };
 
 pub const GATE_SESSION_COOKIE: &str = "realmforge_session";
+const ID_TOKEN_LIFETIME_SECONDS: u64 = 300;
 
 #[derive(Debug)]
 struct GateHttpRuntime {
@@ -58,6 +60,8 @@ pub struct AccessTokenResponse {
     pub access_token: String,
     pub token_type: &'static str,
     pub expires_in: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,6 +72,8 @@ struct AuthorizeQuery {
     code_challenge: String,
     code_challenge_method: String,
     state: Option<String>,
+    scope: Option<String>,
+    nonce: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -153,6 +159,15 @@ async fn authorize(
         Ok(value) => value,
         Err(_) => return invalid_request("code_challenge is invalid"),
     };
+    let oidc = query
+        .scope
+        .as_deref()
+        .filter(|scope| {
+            scope
+                .split_ascii_whitespace()
+                .any(|value| value == "openid")
+        })
+        .map(|_| OidcAuthorizationContext::new(query.nonce));
     let session_id = match session_id_from_headers(&headers) {
         Some(value) => value,
         None => return login_required(),
@@ -180,6 +195,7 @@ async fn authorize(
             redirect_uri,
             pkce_challenge,
             state: query.state,
+            oidc,
         },
         now_unix,
     ) {
@@ -243,11 +259,36 @@ async fn token(State(state): State<GateHttpState>, Form(form): Form<TokenForm>) 
         ) => return invalid_grant(),
         Err(_) => return server_error(),
     };
+    drop(runtime);
+
+    let id_token = if let Some(oidc) = response.oidc.as_ref() {
+        let issuer = match Issuer::new(state.metadata.issuer.clone()) {
+            Ok(value) => value,
+            Err(_) => return server_error(),
+        };
+        let issuer =
+            match IdTokenIssuer::new(issuer, state.signing.clone(), ID_TOKEN_LIFETIME_SECONDS) {
+                Ok(value) => value,
+                Err(_) => return server_error(),
+            };
+        match issuer.issue(
+            &response.subject,
+            &response.client_id,
+            now_unix,
+            oidc.nonce.as_deref(),
+        ) {
+            Ok(value) => Some(value),
+            Err(_) => return server_error(),
+        }
+    } else {
+        None
+    };
 
     Json(AccessTokenResponse {
         access_token: response.access_token.expose().to_owned(),
         token_type: response.token_type,
         expires_in: response.expires_in,
+        id_token,
     })
     .into_response()
 }
@@ -328,10 +369,11 @@ mod tests {
         body::{Body, to_bytes},
         http::Request,
     };
+    use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
     use tower::ServiceExt;
 
     use super::*;
-    use crate::{GateSession, IdentitySubject, Issuer, OAuthClient, PkceCodeVerifier, SessionId};
+    use crate::{GateSession, IdentitySubject, OAuthClient, PkceCodeVerifier, SessionId};
 
     const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
@@ -361,16 +403,32 @@ mod tests {
     }
 
     fn authorize_uri(redirect_uri: &str) -> String {
+        authorize_uri_with_scope(redirect_uri, Some("openid"), Some("nonce-1"))
+    }
+
+    fn authorize_uri_with_scope(
+        redirect_uri: &str,
+        scope: Option<&str>,
+        nonce: Option<&str>,
+    ) -> String {
         let verifier = PkceCodeVerifier::new(VERIFIER).unwrap();
         let challenge = PkceS256Challenge::from_verifier(&verifier);
         let mut url = Url::parse("http://localhost/authorize").unwrap();
-        url.query_pairs_mut()
+        let mut pairs = url.query_pairs_mut();
+        pairs
             .append_pair("response_type", "code")
             .append_pair("client_id", "client-1")
             .append_pair("redirect_uri", redirect_uri)
             .append_pair("code_challenge", challenge.as_str())
             .append_pair("code_challenge_method", "S256")
             .append_pair("state", "opaque-state");
+        if let Some(scope) = scope {
+            pairs.append_pair("scope", scope);
+        }
+        if let Some(nonce) = nonce {
+            pairs.append_pair("nonce", nonce);
+        }
+        drop(pairs);
         format!("{}?{}", url.path(), url.query().unwrap())
     }
 
@@ -382,6 +440,19 @@ mod tests {
             .append_pair("redirect_uri", "https://client.example/callback")
             .append_pair("code_verifier", VERIFIER);
         form.finish()
+    }
+
+    fn authorization_code_from_response(response: &Response) -> String {
+        let location = response
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let redirect = Url::parse(location).unwrap();
+        let params: std::collections::BTreeMap<_, _> =
+            redirect.query_pairs().into_owned().collect();
+        params.get("code").unwrap().clone()
     }
 
     #[tokio::test]
@@ -441,7 +512,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn authorize_and_token_exchange_work_over_http_and_code_is_single_use() {
+    async fn oidc_authorize_and_token_exchange_returns_signed_id_token() {
         let app = seeded_router();
         let response = app
             .clone()
@@ -491,6 +562,16 @@ mod tests {
         assert_eq!(token_json["expires_in"], 3600);
         assert_eq!(token_json["access_token"].as_str().unwrap().len(), 43);
 
+        let id_token = token_json["id_token"].as_str().unwrap();
+        let parts: Vec<_> = id_token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+        let claims: serde_json::Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[1]).unwrap()).unwrap();
+        assert_eq!(claims["iss"], "https://gate.realmforge.test");
+        assert_eq!(claims["sub"], "subject-1");
+        assert_eq!(claims["aud"], "client-1");
+        assert_eq!(claims["nonce"], "nonce-1");
+
         let replay = app
             .oneshot(
                 Request::builder()
@@ -506,6 +587,43 @@ mod tests {
         let bytes = to_bytes(replay.into_body(), usize::MAX).await.unwrap();
         let error_json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(error_json["error"], "invalid_grant");
+    }
+
+    #[tokio::test]
+    async fn oauth_request_without_openid_scope_does_not_return_id_token() {
+        let app = seeded_router();
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(authorize_uri_with_scope(
+                        "https://client.example/callback",
+                        None,
+                        None,
+                    ))
+                    .header(header::COOKIE, format!("{GATE_SESSION_COOKIE}=session-1"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FOUND);
+        let code = authorization_code_from_response(&response);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/token")
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(token_body(&code)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let token_json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(token_json.get("id_token").is_none());
     }
 
     #[tokio::test]
