@@ -12,12 +12,12 @@ mod realm;
 mod session;
 mod world_auth;
 
-pub use account::{AccountDirectory, AccountId, AccountRecord, AccountStatus, MemoryAccountDirectory};
+pub use account::{
+    AccountDirectory, AccountId, AccountRecord, AccountStatus, MemoryAccountDirectory,
+};
 pub use error::GateError;
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
-pub use oauth::{
-    AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri,
-};
+pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
 pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
 pub use world_auth::{WorldAuthBridge, WorldAuthGrant, WorldAuthRequest};
