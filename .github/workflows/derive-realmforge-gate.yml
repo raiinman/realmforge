@@ -1,0 +1,79 @@
+name: Bootstrap Realmforge Gate derivative
+
+on:
+  push:
+    branches:
+      - rebuild/realmforge-gate-foundation
+    paths:
+      - .github/workflows/derive-realmforge-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  derive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Realmforge
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create covered working derivative from pinned baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="third_party/gate-upstream/source"
+          DST="components/gate"
+          UPSTREAM_COMMIT="$(sed -n 's/^upstream_commit=//p' third_party/gate-upstream/SOURCE_REVISION)"
+
+          test -n "$UPSTREAM_COMMIT"
+          test -f "$SRC/LICENSE.md"
+          test -f "$SRC/Cargo.toml"
+
+          rm -rf "$DST"
+          mkdir -p "$DST"
+          cp -a "$SRC/." "$DST/"
+
+          cat > "$DST/REALMFORGE_DERIVATION.md" <<EOF
+          # Realmforge Gate — Covered Working Derivative
+
+          This directory is the **working derivative** used to turn the pinned Tavern compatibility implementation into Realmforge Gate.
+
+          It is derived from:
+
+          - upstream: \`wowemulation-dev/tavern\`
+          - pinned commit: \`$UPSTREAM_COMMIT\`
+          - source baseline: \`third_party/gate-upstream/source/\`
+          - license: **AGPL-3.0-only**
+
+          The original pinned source remains untouched under \`third_party/gate-upstream/source/\` so Realmforge always has a reproducible before/after baseline.
+
+          ## Rules
+
+          1. Do not describe this directory as clean-room or independently implemented while upstream-derived code remains.
+          2. Keep the upstream license and notices intact.
+          3. Record Realmforge modifications in Git history and, when material, in this file.
+          4. Realmforge product state must not become coupled to Tavern-specific database or wire-protocol structures.
+          5. New product behavior should move toward the Core/Gate contract documented in \`docs/ARCHITECTURE.md\`.
+
+          ## Initial Realmforge rebuild target
+
+          The first production slice removes Tavern's hard-coded single-realm assumptions from the BGS realm-list/join path and introduces a Realmforge-owned Gate realm registry/projection boundary.
+          EOF
+
+          printf '%s\n' "$UPSTREAM_COMMIT" > "$DST/.realmforge-derived-from"
+
+          cmp "$SRC/LICENSE.md" "$DST/LICENSE.md"
+          test "$(cat "$DST/.realmforge-derived-from")" = "$UPSTREAM_COMMIT"
+
+      - name: Commit working derivative
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/gate
+          git commit -m "create Realmforge Gate covered working derivative"
+          git push origin HEAD:rebuild/realmforge-gate-foundation
