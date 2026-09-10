@@ -8,6 +8,7 @@ mod account;
 mod error;
 mod identity;
 mod oauth;
+mod oauth_client;
 mod realm;
 mod session;
 mod world_auth;
@@ -18,6 +19,7 @@ pub use account::{
 pub use error::GateError;
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
 pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
+pub use oauth_client::{OAuthClient, OAuthClientRegistry};
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
 pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
 pub use world_auth::{WorldAuthBridge, WorldAuthGrant, WorldAuthRequest};
