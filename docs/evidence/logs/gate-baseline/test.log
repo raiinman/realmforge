@@ -1,0 +1,199 @@
+   Compiling account-server v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/bin/account-server)
+   Compiling bgs-server v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/bin/bgs-server)
+   Compiling tavern-oauth v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-oauth)
+   Compiling oauth-server v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/bin/oauth-server)
+   Compiling tavern-bgs v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-bgs)
+   Compiling tavern-account v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-account)
+   Compiling tavern-observability v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-observability)
+   Compiling tavern-db v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-db)
+   Compiling tavern-core v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.18s
+     Running unittests src/main.rs (target/debug/deps/account_server-ec6b716785fe744a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/bgs_server-033167e5735112bb)
+
+running 5 tests
+test game_utilities::tests::realm_join_rejects_unknown_realm ... ok
+test game_utilities::tests::realm_version_maps_builds ... ok
+test game_utilities::tests::realm_list_json_is_valid ... ok
+test game_utilities::tests::zlib_round_trip ... ok
+test game_utilities::tests::realm_join_response_carries_all_params ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/oauth_server-b271dc14e724962e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_account-01fd2c9ce2ae95d2)
+
+running 7 tests
+test email::tests::embedded_logo_bytes_are_nonempty_png ... ok
+test email::tests::email_renders ... ok
+test locale::tests::all_locales_are_valid ... ok
+test locale::tests::country_to_locale_works ... ok
+test email::tests::mailbox_parsing_works ... ok
+test locale::tests::region_mapping ... ok
+test locale::tests::default_locales ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/api_ui.rs (target/debug/deps/api_ui-6175d9cd80a5c057)
+
+running 3 tests
+test login_page_renders ... ok
+test api_returns_account_data ... ok
+test password_change_rewrites_both_schemes ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.18s
+
+     Running tests/bnet_login.rs (target/debug/deps/bnet_login-1bdcbbfb529e8f4b)
+
+running 4 tests
+test bnet_game_accounts ... ok
+test bnet_plaintext_login_succeeds ... ok
+test bnet_srp_wrong_password_rejected ... ok
+test bnet_srp_login_succeeds ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+
+     Running tests/creation_flow.rs (target/debug/deps/creation_flow-b2f593ca3f47f2a2)
+
+running 2 tests
+test battletag_suggestion_returns_valid ... ok
+test creation_flow_full_sequence ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.61s
+
+     Running tests/locale_emails.rs (target/debug/deps/locale_emails-b9e9be349050b972)
+
+running 1 test
+test signup_emails_all_locales ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.15s
+
+     Running tests/srp_login.rs (target/debug/deps/srp_login-4a4448904abb2079)
+
+running 3 tests
+test plaintext_credential_is_stored_and_verifiable ... ok
+test wrong_password_is_rejected ... ok
+test register_then_srp_login_succeeds ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.63s
+
+     Running tests/tos_flow.rs (target/debug/deps/tos_flow-631edf6e16ddbe4d)
+
+running 3 tests
+test agreement_document_served_only_for_current_version ... ok
+test client_login_tos_accept_requires_consent_and_session ... ok
+test client_login_legal_then_accept_then_done ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_bgs-54e660bbab68702b)
+
+running 20 tests
+test frame::tests::incomplete_returns_none ... ok
+test frame::tests::round_trip_empty_body ... ok
+test frame::tests::round_trip_with_body ... ok
+test service_hash::tests::account_notify_v1_hash ... ok
+test service_hash::tests::authentication_client_v1_hash ... ok
+test service_hash::tests::challenge_notify_v1_hash ... ok
+test service_hash::tests::authentication_server_v1_hash ... ok
+test service_hash::tests::club_membership_listener_v1_hash ... ok
+test service_hash::tests::authentication_service_v2_hash ... ok
+test service_hash::tests::club_membership_service_v1_hash ... ok
+test service_hash::tests::connection_service_hash_matches_spec ... ok
+test service_hash::tests::friends_notify_v1_hash ... ok
+test service_hash::tests::friends_service_v1_hash ... ok
+test service_hash::tests::game_utilities_v1_hash ... ok
+test service_hash::tests::known_fnv1a_vectors ... ok
+test service_hash::tests::presence_listener_v1_hash ... ok
+test service_hash::tests::presence_service_v1_hash ... ok
+test service_hash::tests::report_service_v1_hash ... ok
+test service_hash::tests::resources_v1_hash ... ok
+test service_hash::tests::user_manager_notify_v1_hash ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_core-9f6049a70fde1325)
+
+running 32 tests
+test config::tests::all_keys_override_defaults ... ok
+test config::tests::blank_database_url_is_rejected ... ok
+test config::tests::missing_database_url_is_rejected ... ok
+test config::tests::tls_paths_are_optional_and_parse ... ok
+test config::tests::unknown_keys_are_ignored ... ok
+test config::tests::valid_with_only_required_key_applies_defaults ... ok
+test encrypted_ticket::tests::seal_open_round_trip ... ok
+test encrypted_ticket::tests::wrong_key_fails ... ok
+test encrypted_ticket::tests::tampered_ticket_fails ... ok
+test error::tests::invalid_variant_mentions_key_and_reason ... ok
+test error::tests::missing_variant_mentions_key ... ok
+test jwt::tests::rotation_publishes_active_and_retired ... ok
+test jwt::tests::jwks_round_trip_verifies_signed_token ... ok
+test jwt::tests::sign_verify_round_trip ... ok
+test key_meta::tests::load_demo_meta ... ok
+test key_meta::tests::load_missing_meta ... ok
+test srp::encoding::tests::pad_be_fixed_left_pads_to_width ... ok
+test srp::encoding::tests::signed_be_prepends_zero_when_high_bit_set ... ok
+test srp::encoding::tests::srp_username_is_uppercase_hex_of_sha256_of_upper_login ... ok
+test srp::groups::tests::generator_is_two ... ok
+test srp::groups::tests::modulus_is_2048_bits ... ok
+test jwt::tests::unknown_kid_is_rejected ... ok
+test jwt::tests::wrong_issuer_is_rejected ... ok
+test srp::tests::degenerate_a_is_rejected ... ok
+test srp::kdf::tests::compute_x_is_deterministic_and_nonneg ... ok
+test srp::kdf::tests::compute_x_differs_on_password ... ok
+test srp::tests::golden_vector_matches_python_oracle ... ok
+test srp::tests::random_b_round_trip ... ok
+test srp::tests::session_is_single_use ... ok
+test srp::tests::register_then_login_succeeds ... ok
+test srp::tests::wrong_password_is_rejected ... ok
+test srp::tests::trinitycore_reference_verifiers_match ... ok
+
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.55s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_db-1e1ba246f3fe0cde)
+
+running 8 tests
+test authorization_codes::tests::insert_consume_round_trip ... ok
+test oauth_clients::tests::seeded_clients_are_queryable ... ok
+test credentials::tests::upsert_find_round_trip ... ok
+test accounts::tests::create_find_update_round_trip ... ok
+test refresh_tokens::tests::insert_find_revoke_round_trip ... ok
+test service_tickets::tests::insert_consume_round_trip ... ok
+test tests::migrations_apply_and_round_trip ... ok
+test sessions::tests::insert_find_delete_round_trip ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_oauth-45dda282de74c903)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/oauth_flow.rs (target/debug/deps/oauth_flow-5a756e54e7af2b23)
+
+running 5 tests
+test discovery_lists_endpoints ... ok
+test refresh_token_rotates ... ok
+test authorize_token_round_trip ... ok
+test pkce_flow ... ok
+test token_exchange_grant ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+
+     Running unittests src/lib.rs (target/debug/deps/tavern_observability-26769bac69878fd7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
