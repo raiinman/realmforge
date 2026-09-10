@@ -13,9 +13,8 @@ use url::Url;
 
 use crate::{
     AuthorizationCode, AuthorizationRequest, ClientId, GateError, JsonWebKeySet,
-    OAuthClientRegistry, OAuthService, OidcSigningAuthority, PkceCodeVerifier,
-    PkceS256Challenge, ProviderMetadata, RedirectUri, SessionId, SessionRegistry,
-    TokenExchangeRequest,
+    OAuthClientRegistry, OAuthService, OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge,
+    ProviderMetadata, RedirectUri, SessionId, SessionRegistry, TokenExchangeRequest,
 };
 
 pub const GATE_SESSION_COOKIE: &str = "realmforge_session";
