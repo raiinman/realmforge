@@ -59,12 +59,9 @@ pub async fn handle_process_client_request(
             info!(session_id = %sid, "LastCharPlayed — returning empty");
             Ok(vec![build_empty_response(header)?])
         }
-        "Command_RealmJoinRequest_v1" => handle_realm_join_request(
-            &state.realm_registry,
-            session,
-            header,
-            &request,
-        ),
+        "Command_RealmJoinRequest_v1" => {
+            handle_realm_join_request(&state.realm_registry, session, header, &request)
+        }
         "Command_CharacterListRequest_v1" => {
             info!(session_id = %sid, "CharacterList — returning empty");
             Ok(vec![build_empty_response(header)?])
@@ -232,7 +229,11 @@ fn handle_realm_join_request(
         return Ok(vec![build_error_response(header)?]);
     };
 
-    let family = if realm.public_address.contains(':') { 2 } else { 1 };
+    let family = if realm.public_address.contains(':') {
+        2
+    } else {
+        1
+    };
     let addresses_json = serde_json::json!({
         "families": [{
             "family": family,

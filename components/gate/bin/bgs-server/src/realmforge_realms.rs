@@ -202,10 +202,7 @@ impl RealmRegistry {
         })
     }
 
-    pub fn advertised_realms(
-        &self,
-        build: Option<i32>,
-    ) -> Vec<(&RealmDefinition, ClientVersion)> {
+    pub fn advertised_realms(&self, build: Option<i32>) -> Vec<(&RealmDefinition, ClientVersion)> {
         let effective = Self::effective_build(build);
         let Some(version) = self.version_for_build(build) else {
             return Vec::new();
@@ -406,7 +403,9 @@ mod tests {
         .unwrap();
 
         assert_eq!(registry.len(), 2);
-        let beta = registry.find_join_target(0x0101_0200, Some(31_650)).unwrap();
+        let beta = registry
+            .find_join_target(0x0101_0200, Some(31_650))
+            .unwrap();
         assert_eq!(beta.id, "beta");
         assert_eq!(beta.game_port, 8086);
     }

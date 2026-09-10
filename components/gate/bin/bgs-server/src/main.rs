@@ -7,6 +7,7 @@
 //! Milestone 18: AuthenticationService, GameUtilitiesService, AccountService
 
 mod game_utilities;
+mod realmforge_realms;
 mod tcp_transport;
 
 use std::net::SocketAddr;
@@ -126,12 +127,10 @@ pub struct BgsState {
         dashmap::DashMap<String, tokio::sync::mpsc::UnboundedSender<prost::bytes::Bytes>>,
     /// active_accounts: account_id → session_id. Enforces one session per account.
     pub active_accounts: dashmap::DashMap<u64, String>,
-    /// World-server address handed to clients via `Param_ServerAddresses`
-    /// in the `Command_RealmJoinRequest_v1` response (env `REALM_ADDRESS`,
-    /// `REALM_PORT`). The realm server itself is an external integration;
-    /// tavern stops at the join handoff.
-    pub realm_ip: String,
-    pub realm_port: u16,
+    /// Gate-side projection of Realmforge's realm registry. This is a
+    /// temporary compatibility boundary until Core supplies the registry over
+    /// an explicit service contract; it is not the canonical product model.
+    pub realm_registry: realmforge_realms::RealmRegistry,
 }
 
 /// Build a rustls server config from a PEM certificate chain and private key.
@@ -140,10 +139,7 @@ pub struct BgsState {
 /// real client dials the BGS port over TLS, mirroring TrinityCore's
 /// bnetserver. Left unset, the listener stays plaintext for the synthetic
 /// test clients.
-fn load_tls_server_config(
-    cert_path: &str,
-    key_path: &str,
-) -> anyhow::Result<rustls::ServerConfig> {
+fn load_tls_server_config(cert_path: &str, key_path: &str) -> anyhow::Result<rustls::ServerConfig> {
     use std::io::BufReader;
 
     let certs = rustls_pemfile::certs(&mut BufReader::new(std::fs::File::open(cert_path)?))
@@ -1883,7 +1879,7 @@ fn main() -> anyhow::Result<()> {
                 )
                 .init();
 
-            let meter_provider = tavern_observability::init("bgs-server");
+            let meter_provider = tavern_observability::init("realmforge-gate");
             let bind_addr: SocketAddr = std::env::var("BIND_ADDR")
                 .unwrap_or_else(|_| "127.0.0.1:8119".to_string())
                 .parse()
@@ -1899,6 +1895,12 @@ fn main() -> anyhow::Result<()> {
                 tavern_observability::health_router(Some(db.clone()));
             health_state.mark_started();
 
+            let realm_registry = realmforge_realms::RealmRegistry::from_env()?;
+            info!(
+                realm_count = realm_registry.len(),
+                "Realmforge Gate realm registry loaded"
+            );
+
             let state = Arc::new(BgsState {
                 active_logins: std::sync::atomic::AtomicU64::new(0),
                 max_logins: std::env::var("MAX_BGS_LOGINS")
@@ -1908,21 +1910,16 @@ fn main() -> anyhow::Result<()> {
                 login_queue: std::sync::Mutex::new(std::collections::VecDeque::new()),
                 push_channels: dashmap::DashMap::new(),
                 active_accounts: dashmap::DashMap::new(),
-                realm_ip: std::env::var("REALM_ADDRESS")
-                    .unwrap_or_else(|_| "127.0.0.1".to_string()),
-                realm_port: std::env::var("REALM_PORT")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(8085),
+                realm_registry,
                 db,
             });
             spawn_queue_ticker(state.clone());
 
             // BGS metrics.
             let q_state = state.clone();
-            let bgs_meter = opentelemetry::global::meter("tavern");
+            let bgs_meter = opentelemetry::global::meter("realmforge.gate");
             bgs_meter
-                .u64_observable_gauge("tavern.bgs.login_queue.length")
+                .u64_observable_gauge("realmforge.gate.bgs.login_queue.length")
                 .with_unit("{client}")
                 .with_description("Clients waiting in the login queue")
                 .with_callback(move |obs| {
@@ -1931,49 +1928,49 @@ fn main() -> anyhow::Result<()> {
                 .build();
             AUTH_SUCCESS.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.auth.success")
+                    .u64_counter("realmforge.gate.bgs.auth.success")
                     .with_unit("{login}")
                     .with_description("Successful BGS logins")
                     .build()
             });
             BUILD_COUNTER.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.client.build")
+                    .u64_counter("realmforge.gate.bgs.client.build")
                     .with_unit("{client}")
                     .with_description("Client connections by build and platform")
                     .build()
             });
             KICKED_COUNTER.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.session.kicked")
+                    .u64_counter("realmforge.gate.bgs.session.kicked")
                     .with_unit("{session}")
                     .with_description("Sessions kicked due to concurrent login")
                     .build()
             });
             AUTH_FAILURE.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.auth.failure")
+                    .u64_counter("realmforge.gate.bgs.auth.failure")
                     .with_unit("{login}")
                     .with_description("Failed BGS logins")
                     .build()
             });
             LICENSE_COUNTER.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.license.count")
+                    .u64_counter("realmforge.gate.bgs.license.count")
                     .with_unit("{license}")
                     .with_description("Licenses granted at login")
                     .build()
             });
             GAME_TIME_HISTOGRAM.get_or_init(|| {
                 bgs_meter
-                    .f64_histogram("tavern.bgs.game_time.remaining_minutes")
+                    .f64_histogram("realmforge.gate.bgs.game_time.remaining_minutes")
                     .with_unit("min")
                     .with_description("Remaining game time at login")
                     .build()
             });
             STATUS_COUNTER.get_or_init(|| {
                 bgs_meter
-                    .u64_counter("tavern.bgs.account.status")
+                    .u64_counter("realmforge.gate.bgs.account.status")
                     .with_unit("{account}")
                     .with_description("Account status at login (ok, suspended, banned, expired)")
                     .build()
@@ -1987,7 +1984,7 @@ fn main() -> anyhow::Result<()> {
                 ))
                 .merge(health_router);
 
-            info!(%bind_addr, "BGS WebSocket server starting");
+            info!(%bind_addr, "Realmforge Gate BGS WebSocket server starting");
             let listener = TcpListener::bind(bind_addr).await?;
 
             // Start raw TCP/TLS listener for WoW Classic 1.13.2 (port 1119).

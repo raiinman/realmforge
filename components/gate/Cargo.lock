@@ -259,6 +259,7 @@ dependencies = [
  "rand 0.8.6",
  "rustls",
  "rustls-pemfile",
+ "serde",
  "serde_json",
  "sqlx",
  "tavern-bgs",
