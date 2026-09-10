@@ -146,12 +146,7 @@ mod tests {
     fn token_debug_is_redacted() {
         let mut store = AccessTokenStore::default();
         let token = store
-            .issue_with_bytes(
-                [9; 32],
-                IdentitySubject::new("subject-1").unwrap(),
-                100,
-                60,
-            )
+            .issue_with_bytes([9; 32], IdentitySubject::new("subject-1").unwrap(), 100, 60)
             .unwrap();
         assert_eq!(format!("{token:?}"), "AccessToken([REDACTED])");
     }
@@ -160,15 +155,13 @@ mod tests {
     fn token_resolves_until_expiry_and_can_be_revoked() {
         let mut store = AccessTokenStore::default();
         let token = store
-            .issue_with_bytes(
-                [9; 32],
-                IdentitySubject::new("subject-1").unwrap(),
-                100,
-                60,
-            )
+            .issue_with_bytes([9; 32], IdentitySubject::new("subject-1").unwrap(), 100, 60)
             .unwrap();
 
-        assert_eq!(store.resolve(&token, 159).unwrap().subject.as_str(), "subject-1");
+        assert_eq!(
+            store.resolve(&token, 159).unwrap().subject.as_str(),
+            "subject-1"
+        );
         assert_eq!(
             store.resolve(&token, 160).unwrap_err(),
             GateError::AccessTokenExpired
