@@ -5,6 +5,18 @@
 
 This document is project engineering policy, not a substitute for legal advice.
 
+## 0. Pinned interim-source fact
+
+The currently researched compatibility implementation is `wowemulation-dev/tavern`.
+
+At pinned revision `6f9158670ee7666bfae2be58b291dafcb45f12e7`, its workspace declares:
+
+```text
+license = "AGPL-3.0-only"
+```
+
+Realmforge must preserve the exact applicable upstream license/provenance while any copied or modified covered implementation remains. Earlier conversational shorthand describing it as "or later" is not repository authority.
+
 ## 1. Core rule
 
 Realmforge may use third-party software when its license permits that use. Third-party obligations do not disappear because code is renamed, embedded, moved to another process, translated, or surrounded by Realmforge-owned code.
