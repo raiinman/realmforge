@@ -15,10 +15,7 @@ impl LoginName {
     pub fn new(value: impl Into<String>) -> Result<Self, GateError> {
         let value = value.into();
         let trimmed = value.trim();
-        if trimmed.is_empty()
-            || trimmed.len() > 254
-            || trimmed.chars().any(|ch| ch.is_control())
-        {
+        if trimmed.is_empty() || trimmed.len() > 254 || trimmed.chars().any(|ch| ch.is_control()) {
             return Err(GateError::InvalidLoginName);
         }
         Ok(Self(trimmed.to_ascii_lowercase()))
@@ -93,9 +90,7 @@ pub struct MemoryNativeCredentialStore {
 }
 
 impl MemoryNativeCredentialStore {
-    pub fn new(
-        credentials: impl IntoIterator<Item = NativeCredential>,
-    ) -> Result<Self, GateError> {
+    pub fn new(credentials: impl IntoIterator<Item = NativeCredential>) -> Result<Self, GateError> {
         let mut store = Self::default();
         for credential in credentials {
             store.register(credential)?;
@@ -135,10 +130,7 @@ pub struct NativeLoginService {
 }
 
 impl NativeLoginService {
-    pub fn new(
-        credentials: MemoryNativeCredentialStore,
-        accounts: MemoryAccountDirectory,
-    ) -> Self {
+    pub fn new(credentials: MemoryNativeCredentialStore, accounts: MemoryAccountDirectory) -> Self {
         Self {
             credentials,
             accounts,
