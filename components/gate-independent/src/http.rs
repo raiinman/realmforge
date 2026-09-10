@@ -32,11 +32,7 @@ pub struct GateHttpState {
 }
 
 impl GateHttpState {
-    pub fn new(
-        metadata: ProviderMetadata,
-        oauth: OAuthService,
-        sessions: SessionRegistry,
-    ) -> Self {
+    pub fn new(metadata: ProviderMetadata, oauth: OAuthService, sessions: SessionRegistry) -> Self {
         Self {
             metadata,
             runtime: Arc::new(Mutex::new(GateHttpRuntime { oauth, sessions })),
@@ -322,9 +318,7 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
-    use crate::{
-        GateSession, IdentitySubject, Issuer, OAuthClient, PkceCodeVerifier, SessionId,
-    };
+    use crate::{GateSession, IdentitySubject, Issuer, OAuthClient, PkceCodeVerifier, SessionId};
 
     const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
@@ -338,7 +332,8 @@ mod tests {
             [RedirectUri::new("https://client.example/callback").unwrap()],
         )
         .unwrap();
-        let oauth = OAuthService::new(OAuthClientRegistry::new([client]).unwrap(), 60, 3600).unwrap();
+        let oauth =
+            OAuthService::new(OAuthClientRegistry::new([client]).unwrap(), 60, 3600).unwrap();
         let mut sessions = SessionRegistry::default();
         let mut session = GateSession::new(SessionId::new("session-1").unwrap());
         session
@@ -416,10 +411,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(authorize_uri("https://client.example/callback"))
-                    .header(
-                        header::COOKIE,
-                        format!("{GATE_SESSION_COOKIE}=session-1"),
-                    )
+                    .header(header::COOKIE, format!("{GATE_SESSION_COOKIE}=session-1"))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -434,9 +426,13 @@ mod tests {
             .to_str()
             .unwrap();
         let redirect = Url::parse(location).unwrap();
-        let params: std::collections::BTreeMap<_, _> = redirect.query_pairs().into_owned().collect();
+        let params: std::collections::BTreeMap<_, _> =
+            redirect.query_pairs().into_owned().collect();
         let code = params.get("code").unwrap().clone();
-        assert_eq!(params.get("state").map(String::as_str), Some("opaque-state"));
+        assert_eq!(
+            params.get("state").map(String::as_str),
+            Some("opaque-state")
+        );
 
         let body = token_body(&code);
         let response = app
@@ -481,10 +477,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(authorize_uri("https://evil.example/callback"))
-                    .header(
-                        header::COOKIE,
-                        format!("{GATE_SESSION_COOKIE}=session-1"),
-                    )
+                    .header(header::COOKIE, format!("{GATE_SESSION_COOKIE}=session-1"))
                     .body(Body::empty())
                     .unwrap(),
             )
