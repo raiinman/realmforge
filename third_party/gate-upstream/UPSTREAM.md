@@ -7,7 +7,7 @@
 **Realmforge intake date:** 2026-09-09  
 **Upstream workspace version:** `0.1.0`  
 **Upstream declared license:** `AGPL-3.0-only`  
-**Replacement status:** `TAVERN-DERIVED / INTAKE-PENDING-SNAPSHOT`
+**Replacement status:** `TAVERN-DERIVED / IMPORTED-UNMODIFIED-BASELINE`
 
 ## Why this component exists
 
@@ -39,11 +39,12 @@ The source snapshot should initially be preserved without cosmetic renaming. Rea
 
 At this provenance-file creation point:
 
-- no upstream source snapshot has yet been committed into this directory,
-- no upstream code has been modified inside Realmforge,
-- repository research/docs have been created independently around the future intake.
+- the exact pinned upstream working tree is vendored under `source/`, excluding only upstream `.git` metadata,
+- `SNAPSHOT_MANIFEST.txt` records the upstream Git object identity of every tracked file,
+- the snapshot is an unmodified baseline at intake,
+- no Realmforge integration modification has yet been made to the covered source.
 
-When source intake occurs, change `replacement status` and append the exact import commit here.
+The Git commit containing this snapshot is the repository history commit produced by `.github/workflows/vendor-gate-upstream.yml` immediately after the workflow trigger commit.
 
 ## Intended first modifications after baseline verification
 

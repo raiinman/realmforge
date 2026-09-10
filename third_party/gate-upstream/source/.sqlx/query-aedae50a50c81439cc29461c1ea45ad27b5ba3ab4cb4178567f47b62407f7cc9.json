@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ca.adulthood_age, c.alpha3\n        FROM country_adulthood ca\n        JOIN countries c ON c.id = ca.country_id\n        WHERE c.alpha2 = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "adulthood_age",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "alpha3",
+        "type_info": "Bpchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "aedae50a50c81439cc29461c1ea45ad27b5ba3ab4cb4178567f47b62407f7cc9"
+}

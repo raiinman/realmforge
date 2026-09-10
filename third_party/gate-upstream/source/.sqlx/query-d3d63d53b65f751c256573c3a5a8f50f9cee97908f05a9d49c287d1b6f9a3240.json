@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO bgs_sessions (sso_id, account_id, battle_tag, build, platform, locale, session_key, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '24 hours')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int8",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d3d63d53b65f751c256573c3a5a8f50f9cee97908f05a9d49c287d1b6f9a3240"
+}

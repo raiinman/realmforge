@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO service_tickets (st, account_id, region, expires_at)\n        VALUES ($1, $2, $3, $4)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int2",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0a5f1d68dceddeeaa2c3ea34ad49e59be12c36ed68163d68e804acd13f7dd5cb"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO privacy_settings (account_id, enable_text_chat, enable_voice_chat,\n        enable_voice_chat_speak, enable_friends_management, enable_friends_of_friends,\n        enable_real_id, show_real_id, enable_groups, only_allow_friend_whispers,\n        enable_private_text_chat)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n        ON CONFLICT (account_id) DO UPDATE SET\n          enable_text_chat = $2, enable_voice_chat = $3, enable_voice_chat_speak = $4,\n          enable_friends_management = $5, enable_friends_of_friends = $6,\n          enable_real_id = $7, show_real_id = $8, enable_groups = $9,\n          only_allow_friend_whispers = $10, enable_private_text_chat = $11",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "73d8278f4e7fec282d1345a8fccb12ac17718d606cd8c0cbc6e932798aa9d3f1"
+}

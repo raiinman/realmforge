@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT device_code, user_code, client_id, account_id, scope,\n                expires_at, approved\n         FROM device_authorizations\n         WHERE UPPER(user_code) = UPPER($1) AND expires_at > NOW()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "device_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "account_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "scope",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "approved",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a6f2af320525ea104409cd5da083e32a256fb53b9b8fc392b8d9d2efd09ac4cb"
+}

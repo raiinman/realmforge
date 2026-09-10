@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO privacy_settings (account_id, enable_third_party_sharing)\n        VALUES ($1, $2)\n        ON CONFLICT (account_id) DO UPDATE SET enable_third_party_sharing = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "950a907dffae01b6f247d1bf6e7ef05fd9fca060b800e4ad3036788240d94658"
+}

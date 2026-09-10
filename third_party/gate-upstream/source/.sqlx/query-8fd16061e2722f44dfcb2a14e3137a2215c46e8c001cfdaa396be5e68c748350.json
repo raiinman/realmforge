@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT license_id, level, game_account_id\n        FROM account_licenses\n        WHERE account_id = $1 AND game_account_id IS NULL\n        ORDER BY license_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "license_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "level",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "game_account_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "8fd16061e2722f44dfcb2a14e3137a2215c46e8c001cfdaa396be5e68c748350"
+}

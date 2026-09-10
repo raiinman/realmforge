@@ -1,0 +1,23 @@
+[package]
+name = "account-server"
+description = "Account management binary (replaces account.battle.net)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tavern-core = { workspace = true }
+tavern-db = { workspace = true }
+tavern-account = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tavern-observability = { workspace = true }
+anyhow = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+tokio-rustls = { workspace = true }

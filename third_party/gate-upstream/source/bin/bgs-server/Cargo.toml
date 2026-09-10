@@ -1,0 +1,33 @@
+[package]
+name = "bgs-server"
+description = "BGS WebSocket server — RPC transport over WSS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+uuid = { workspace = true }
+tavern-bgs = { workspace = true }
+tavern-db = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true, features = ["ws"] }
+futures-util = { workspace = true }
+tokio-tungstenite = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tavern-observability = { workspace = true }
+opentelemetry = { workspace = true, features = ["metrics"] }
+anyhow = { workspace = true }
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+prost = { workspace = true }
+hex = { workspace = true }
+dashmap = { workspace = true }
+rand = { workspace = true }
+flate2 = "1"
+serde_json = { workspace = true }

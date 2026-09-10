@@ -4,4 +4,4 @@ upstream_commit_date=2026-09-08
 intake_date=2026-09-09
 upstream_version=0.1.0
 upstream_license=AGPL-3.0-only
-source_snapshot_status=NOT_YET_IMPORTED
+source_snapshot_status=IMPORTED_UNMODIFIED_BASELINE

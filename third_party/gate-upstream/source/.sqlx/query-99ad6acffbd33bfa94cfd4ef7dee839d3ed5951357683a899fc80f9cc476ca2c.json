@@ -1,0 +1,156 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE accounts SET\n            email = $2,\n            email_verified = $3,\n            battletag = $4,\n            country_code = $5,\n            country_id = $6,\n            region = $7,\n            locale = $8,\n            first_name = $9,\n            last_name = $10,\n            birth_date = $11,\n            mobile_number = $12,\n            street1 = $13,\n            street2 = $14,\n            city = $15,\n            state = $16,\n            postal_code = $17,\n            updated_at = NOW()\n        WHERE id = $1\n        RETURNING id, email, email_verified, battletag, country_code, country_id,\n                  region, locale, first_name, last_name, birth_date, mobile_number,\n                  street1, street2, city, state, postal_code,\n                  created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email_verified",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "battletag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "country_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "country_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "region",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 7,
+        "name": "locale",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "birth_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "mobile_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "street1",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "street2",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "postal_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        },
+        "Bool",
+        "Text",
+        "Bpchar",
+        "Int4",
+        "Int2",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "99ad6acffbd33bfa94cfd4ef7dee839d3ed5951357683a899fc80f9cc476ca2c"
+}

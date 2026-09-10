@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE authorization_codes SET used = TRUE\n        WHERE code = $1 AND used = FALSE AND expires_at > NOW()\n        RETURNING code, client_id, account_id, scope, redirect_uri,\n                  code_challenge, nonce, expires_at, used\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "account_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "scope",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "redirect_uri",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "code_challenge",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "nonce",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "used",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3d75fae771fb06bab971af92039489fc48f375d5512f199db632c50f1f4771ba"
+}
