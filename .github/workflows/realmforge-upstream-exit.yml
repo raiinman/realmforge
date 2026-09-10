@@ -1,0 +1,145 @@
+name: Realmforge active Gate upstream-identity exit
+
+on:
+  push:
+    branches:
+      - rebuild/realmforge-upstream-exit
+    paths:
+      - .github/workflows/realmforge-upstream-exit.yml
+      - tools/realmforge_upstream_exit.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: realmforge-upstream-exit
+  cancel-in-progress: false
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realmforge_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d realmforge_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      REALMFORGE_GATE_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/realmforge_gate
+      SQLX_OFFLINE: "true"
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Check out upstream-exit branch
+        uses: actions/checkout@v4
+        with:
+          ref: rebuild/realmforge-upstream-exit
+          fetch-depth: 0
+
+      - name: Install Rust 1.97
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.97.0
+
+      - name: Remove inherited product identity from active Gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/realmforge_upstream_exit.py
+
+      - name: Prove frozen upstream baseline stayed untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- third_party/gate-upstream/source
+
+      - name: Reconcile package graph after Realmforge renames
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd components/gate
+          cargo +1.97.0 fmt --all
+          cargo +1.97.0 test --workspace --all-targets
+
+      - name: Verify locked Realmforge Gate workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd components/gate
+          cargo +1.97.0 test --locked --workspace --all-targets
+
+      - name: Enforce active-tree identity boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('components/gate')
+          allowed = {
+              root / 'LICENSE.md',
+              root / 'REALMFORGE_DERIVATION.md',
+              root / '.realmforge-derived-from',
+          }
+          hits = []
+          for path in root.rglob('*'):
+              if not path.is_file() or path in allowed or 'target' in path.parts:
+                  continue
+              if 'tavern' in path.name.lower():
+                  hits.append(f'path: {path}')
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              if 'tavern' in text.lower():
+                  hits.append(f'content: {path}')
+          if hits:
+              raise SystemExit('Inherited product identity remains outside provenance boundary:\n' + '\n'.join(hits))
+          PY
+
+      - name: Record verified identity-exit evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/evidence
+          cat > docs/evidence/REALMFORGE_ACTIVE_GATE_IDENTITY_EXIT_2026-09-09.md <<'EOF'
+          # Realmforge active Gate identity-exit evidence — 2026-09-09
+
+          **Status:** PASS
+
+          The active `components/gate/` working derivative has completed its first inherited-product-identity removal pass.
+
+          Verified properties:
+
+          - active Gate crate/package/bin names use Realmforge identity,
+          - active Gate source and product documentation contain no inherited product name,
+          - active Gate workspace tests pass after the rename,
+          - the lockfile is reconciled and passes `--locked`,
+          - the frozen `third_party/gate-upstream/source/` baseline is unchanged,
+          - exact upstream name/license/provenance remains only in the explicit legal/provenance boundary while derived code remains.
+
+          This is an identity and packaging refactor of covered code. It is **not** an independent replacement claim.
+          EOF
+
+      - name: Commit verified Realmforge identity exit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "remove inherited product identity from active Realmforge Gate"
+          git push origin HEAD:rebuild/realmforge-upstream-exit
