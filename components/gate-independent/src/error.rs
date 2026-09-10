@@ -26,7 +26,11 @@ pub enum GateError {
     SessionAlreadyAuthenticated,
     SessionClosed,
     InvalidOAuthClientId,
+    OAuthClientNotFound,
+    DuplicateOAuthClientId,
+    OAuthClientHasNoRedirectUris,
     InvalidRedirectUri,
+    RedirectUriNotRegistered,
     InvalidPkceVerifier,
     InvalidPkceChallenge,
     InvalidAuthorizationGrantLifetime,
@@ -72,7 +76,13 @@ impl fmt::Display for GateError {
             }
             Self::SessionClosed => write!(f, "session is already closed"),
             Self::InvalidOAuthClientId => write!(f, "OAuth client id must not be empty"),
+            Self::OAuthClientNotFound => write!(f, "OAuth client not found"),
+            Self::DuplicateOAuthClientId => write!(f, "OAuth client id already exists"),
+            Self::OAuthClientHasNoRedirectUris => {
+                write!(f, "OAuth client must register at least one redirect URI")
+            }
             Self::InvalidRedirectUri => write!(f, "redirect URI must not be empty"),
+            Self::RedirectUriNotRegistered => write!(f, "redirect URI is not registered"),
             Self::InvalidPkceVerifier => write!(f, "PKCE verifier is invalid"),
             Self::InvalidPkceChallenge => write!(f, "PKCE challenge is invalid"),
             Self::InvalidAuthorizationGrantLifetime => {
