@@ -74,8 +74,10 @@ impl IdTokenIssuer {
             nonce,
         };
 
-        let header_json = serde_json::to_vec(&header).map_err(|_| GateError::IdTokenEncodingFailed)?;
-        let claims_json = serde_json::to_vec(&claims).map_err(|_| GateError::IdTokenEncodingFailed)?;
+        let header_json =
+            serde_json::to_vec(&header).map_err(|_| GateError::IdTokenEncodingFailed)?;
+        let claims_json =
+            serde_json::to_vec(&claims).map_err(|_| GateError::IdTokenEncodingFailed)?;
         let header_segment = URL_SAFE_NO_PAD.encode(header_json);
         let claims_segment = URL_SAFE_NO_PAD.encode(claims_json);
         let signing_input = format!("{header_segment}.{claims_segment}");
