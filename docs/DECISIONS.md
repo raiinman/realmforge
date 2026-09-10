@@ -123,6 +123,19 @@ Because project maintainers and prior agents have already viewed inherited sourc
 
 The covered Gate may be removed from the active product tree only after independently authored replacement behavior reaches verified parity for the launch-critical path.
 
+## D-0020 — First playable vertical-slice emulator target
+
+**Status:** LOCKED FOR FIRST VERTICAL SLICE  
+**Decision:** Realmforge will use **TrinityCore `cata_classic`** as the first external world-emulator integration target, paired with the provisional client target **Cataclysm Classic 4.4.2.60895**.
+
+This closes the first-adapter selection problem only for the initial vertical slice. It does not weaken D-0009: Realmforge must keep emulator-specific behavior behind `WorldAuthBridge`/Bridge contracts and remain portable to other cores.
+
+Current public TrinityCore metadata explicitly identifies `cata classic = 4.4.2.60895`, and the `cata_classic` branch was active when selected on 2026-09-10. That makes it the strongest current route to proving Gate → realm join → world entry instead of completing authentication against a client with no credible world counterpart.
+
+This decision is **not a client-support claim**. Target-specific Gate protocol behavior remains `CAPTURE-REQUIRED`; no 4.4.2.60895 protocol adapter may treat third-party implementation code as authority. Real-client first-party fixtures must justify the adapter one observed boundary at a time.
+
+**Closes:** P-004 for the first vertical slice.
+
 ---
 
 # Pending decisions
@@ -134,7 +147,7 @@ These remain open and must not be filled implicitly:
 | P-001 | First production implementation language(s) outside the inherited Gate derivative | OPEN |
 | P-002 | Desktop launcher framework | OPEN |
 | P-003 | Core API framework | OPEN |
-| P-004 | First emulator core/adaptor target | OPEN |
+| P-004 | First emulator core/adaptor target | **CLOSED — D-0020** |
 | P-005 | Interim third-party Gate import method | **CLOSED — D-0015** |
 | P-006 | Whether desktop-app compatibility is launch-critical | OPEN |
 | P-007 | Homelab-only versus public-hosting security profile at M1 | OPEN |
