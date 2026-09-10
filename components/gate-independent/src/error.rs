@@ -36,6 +36,8 @@ pub enum GateError {
     InvalidAuthorizationGrantLifetime,
     AuthorizationGrantConsumed,
     AuthorizationGrantExpired,
+    AuthorizationCodeNotFound,
+    DuplicateAuthorizationCode,
     OAuthClientMismatch,
     OAuthRedirectMismatch,
     PkceVerificationFailed,
@@ -91,6 +93,8 @@ impl fmt::Display for GateError {
             }
             Self::AuthorizationGrantConsumed => write!(f, "authorization grant was already used"),
             Self::AuthorizationGrantExpired => write!(f, "authorization grant expired"),
+            Self::AuthorizationCodeNotFound => write!(f, "authorization code not found"),
+            Self::DuplicateAuthorizationCode => write!(f, "authorization code collision"),
             Self::OAuthClientMismatch => {
                 write!(f, "OAuth client does not match authorization grant")
             }
