@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import base64
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,8 @@ DIR_RENAMES = {
 }
 
 REPLACEMENTS = [
+    ("https://github.com/wowemulation-dev/tavern", "https://github.com/raiinman/realmforge"),
+    ("wowemulation-dev/tavern", "raiinman/realmforge"),
     ("tavern-observability", "realmforge-gate-observability"),
     ("tavern-account", "realmforge-gate-account"),
     ("tavern-oauth", "realmforge-gate-oauth"),
@@ -43,6 +46,12 @@ LEGAL_OR_PROVENANCE = {
 }
 
 SKIP_BASENAMES = {"LICENSE", "LICENSE.txt", "COPYING", "NOTICE", "NOTICE.md"}
+
+# A valid transparent 1x1 PNG. Until Realmforge's final visual identity is
+# authored, inherited brand art must not survive under a renamed filename.
+TRANSPARENT_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEAQH/6iZcWQAAAABJRU5ErkJggg=="
+)
 
 
 def rename_directories() -> None:
@@ -76,6 +85,33 @@ def rewrite_text_files() -> None:
             new = new.replace(old, replacement)
         if new != text:
             path.write_text(new, encoding="utf-8")
+
+
+def neutralize_inherited_brand_assets() -> None:
+    static = GATE / "crates" / "realmforge-gate-account" / "static"
+    if not static.exists():
+        return
+
+    # Delete the inherited visual marks instead of laundering them through a
+    # filename change. Product-facing placeholders stay intentionally blank
+    # until native Realmforge art is committed.
+    for name in ("tavern-logo-light.png", "tavern-logo-dark.png"):
+        path = static / name
+        if path.exists():
+            path.unlink()
+
+    for name in (
+        "realmforge-logo-light.png",
+        "realmforge-logo-dark.png",
+        "email-logo-light.png",
+        "email-logo-dark.png",
+    ):
+        (static / name).write_bytes(TRANSPARENT_PNG)
+
+    (static / "favicon.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>\n',
+        encoding="utf-8",
+    )
 
 
 def normalize_workspace_metadata() -> None:
@@ -125,6 +161,7 @@ def rename_exit_ledger() -> None:
 def main() -> None:
     rename_directories()
     rewrite_text_files()
+    neutralize_inherited_brand_assets()
     normalize_workspace_metadata()
     replace_product_docs()
     rename_exit_ledger()
