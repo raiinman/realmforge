@@ -110,6 +110,19 @@ Exact build profiles are required by default. An unsafe compatibility override m
 
 This configuration authority is scoped to Gate. It does not decide Core's storage technology, deployment model, or Core ↔ Gate transport.
 
+## D-0019 — Independent Gate replacement is the primary implementation path
+
+**Status:** LOCKED BY OWNER  
+**Decision:** The end state is not a renamed or progressively disguised derivative. Realmforge will rebuild the required Gate capabilities as newly authored Realmforge implementation so the active final subsystem no longer depends on inherited implementation code.
+
+The covered `components/gate/` tree is temporary compatibility/evidence infrastructure only. Work that merely renames, reorganizes, or cosmetically cleans it does not advance the final replacement except where needed to keep the interim system testable.
+
+Fresh replacement implementation begins under `components/gate-independent/` and must not import from the covered Gate tree. Implementation behavior must be justified by public standards, Realmforge-owned requirements, Realmforge-owned black-box captures/fixtures, and independently documented interoperability facts.
+
+Because project maintainers and prior agents have already viewed inherited source, this effort must not be advertised as a formal clean-room process. It is an independent reimplementation with a strict no-copy/no-port rule.
+
+The covered Gate may be removed from the active product tree only after independently authored replacement behavior reaches verified parity for the launch-critical path.
+
 ---
 
 # Pending decisions

@@ -1,147 +1,191 @@
 # Realmforge Rebuild Plan
 
 **Status:** ACTIVE  
-**Branch:** `rebuild/realmforge-gate-foundation`  
-**Purpose:** Turn the useful inherited compatibility implementation into the first functioning Realmforge subsystem without letting inherited architecture define the product.
+**Branch:** `rebuild/realmforge-independent-gate`  
+**Purpose:** Replace the covered interim Gate with newly authored Realmforge implementation, verified from public standards and independent behavior evidence.
 
 ## 1. Non-negotiable boundaries
 
-- `third_party/gate-upstream/source/` is the frozen upstream evidence baseline.
-- `components/gate/` is the current AGPL-covered working derivative.
-- Realmforge Core's canonical models must not become aliases for BGS protobufs, Tavern database rows, or emulator SQL.
-- Unknown client behavior remains explicit.
+- `components/gate/` is temporary covered interoperability infrastructure, not the target implementation.
+- `components/gate-independent/` is the fresh replacement tree.
+- New implementation must not import, include, translate, or structurally port covered Gate source.
+- Public standards, Realmforge-owned requirements, black-box captures, and independently documented interoperability behavior are the implementation inputs.
+- Unknown client behavior remains explicit until independently captured.
 - Real-client evidence outranks inherited documentation.
-- Covered-source refactors remain covered-source refactors; they are not called clean-room replacements.
+- This effort is not advertised as a formal clean-room rewrite because prior maintainers/agents have already viewed inherited source.
+- Realmforge Core canonical state must not become a protocol or emulator schema mirror.
 
 ## 2. Rebuild sequence
 
-### RF-G0 — Baseline and quarantine — COMPLETE
+### RF-I0 — Independent boundary and CI — ACTIVE
 
-- exact upstream commit pinned,
-- complete source snapshot imported,
-- AGPL boundary preserved,
-- snapshot manifest recorded,
-- untouched build/test/database baseline passed,
-- working derivative created separately under `components/gate/`.
+Goal: establish a source-independent implementation lane that can be audited separately.
 
-### RF-G1 — Realmforge realm registry boundary — COMPLETE
+Delivered so far:
 
-Goal: remove the single hard-coded Tavern realm from BGS realm-list/join behavior.
+- `docs/INDEPENDENT_GATE_REBUILD.md`,
+- D-0019 owner authority,
+- `components/gate-independent/`,
+- fresh semantic types for builds, realms, endpoints, identities, game-account projection, and world-auth handoff,
+- exact-build fail-closed catalog behavior,
+- fresh unit tests,
+- dedicated CI workflow.
 
-Delivered:
+Exit condition:
 
-- Realmforge Gate realm registry module,
-- configurable display name/address/port,
-- multiple realm definitions,
-- explicit per-build compatibility profiles,
-- unknown builds fail closed by default,
-- realm-list projection generated from registry,
-- realm-join target resolved from registry,
-- Gate metrics/service identity began moving to Realmforge,
-- regression tests preserving inherited wire behavior,
-- full locked workspace tests pass,
-- pinned upstream baseline remains untouched.
+- CI green,
+- no imports from `components/gate/`,
+- source-independent input policy enforced.
 
-Verification: GitHub Actions run `34437936703` completed successfully.
+### RF-I1 — Identity and session core
 
-### RF-G2 — Realmforge Gate identity cleanup — PARALLEL
-
-Goal: remove product-visible Tavern identity while preserving required legal provenance.
+Goal: implement Realmforge-owned identity/session primitives without protocol coupling.
 
 Work:
 
-- user-facing account/login branding,
-- service/log/metric names,
-- configuration names,
-- deployment/container names,
-- local test identities,
-- documentation entrypoints.
+- identity subject model,
+- game-account projection,
+- session lifecycle,
+- credential capability interfaces,
+- token/session storage interfaces,
+- explicit security/error model,
+- deterministic tests.
 
-Internal crate/module renames happen only where they improve maintainability; a giant cosmetic rename is not a milestone.
+Do not reproduce inherited database schema merely for convenience.
 
-### RF-G3 — Gate configuration authority — ACTIVE
+### RF-I2 — Standards-based web authentication
 
-Goal: stop relying on a loose pile of inherited environment variables.
+Goal: implement the browser/API auth surface from public standards.
 
-First verified slice:
+Inputs:
 
-- introduced typed `realmforge_config::GateConfig` for the BGS process,
-- Realmforge-prefixed runtime variables are authoritative,
-- inherited names remain migration aliases only,
-- use of legacy aliases is visible at startup,
-- listener addresses, login capacity, worker count, database URL, and TLS pair are validated centrally,
-- TLS cert/key must be supplied together,
-- runtime defaults preserve the inherited compatibility ports,
-- configuration contract documented in `components/gate/REALMFORGE_CONFIG.md`,
-- full locked workspace tests remain green,
-- pinned upstream baseline remains untouched.
+- OAuth 2.0,
+- OpenID Connect,
+- PKCE,
+- JWT/JWK,
+- applicable token-exchange/device-flow standards if launch requirements need them.
 
-Verification: GitHub Actions run `34438409222` completed successfully.
+Acceptance is standards conformance plus Realmforge-owned integration tests, not parity with covered source structure.
 
-Remaining RF-G3 work:
+### RF-I3 — Realm registry and compatibility projection
 
-- database-pool environment names,
-- account-server configuration surface,
-- OAuth-server configuration surface,
-- secret references/rotation policy,
-- eventual replacement of local realm JSON/file loading by the Core ↔ Gate contract.
+Goal: implement the client-neutral realm catalog and build-compatibility authority needed by Gate.
 
-### RF-G4 — Core ↔ Gate contract
+Work:
 
-Goal: make Gate consume Realmforge semantic state rather than owning product state.
+- normalized realm descriptors,
+- exact verified client-build compatibility,
+- fail-closed unknown builds,
+- realm visibility/maintenance state,
+- protocol projection interface,
+- tests that do not depend on covered code.
 
-Minimum contract:
+### RF-I4 — Independent client capture corpus
+
+Goal: create Realmforge-owned evidence for the first retired client family.
+
+For each captured flow record:
+
+- exact client build identity,
+- endpoint/transport sequence,
+- request/response framing,
+- service/method observations,
+- realm-list behavior,
+- realm-join behavior,
+- disconnect/error behavior,
+- world-auth inputs/outputs.
+
+Captured facts become fixtures. Behaviors not observed remain `UNKNOWN`.
+
+### RF-I5 — BGS transport/RPC replacement
+
+Goal: implement only the protocol surface proven necessary by RF-I4.
+
+Rules:
+
+- fresh module design,
+- no copied tests or function layout,
+- constants require independent protocol evidence,
+- unknown methods fail explicitly,
+- wire fixtures are Realmforge-owned.
+
+### RF-I6 — Realm list and realm join
+
+Goal: reproduce the minimum real-client path from independent captures.
+
+Acceptance:
 
 ```text
-AuthenticateIdentity
-GetGameAccountProjection
-ListCompatibleRealms
-CreateClientSession
-IssueRealmJoin
-DisconnectSession
+client authenticates
+        ↓
+client receives Realmforge realm list
+        ↓
+client selects verified-compatible realm
+        ↓
+Gate issues independently implemented join handoff
 ```
 
-This milestone must resolve P-011 before implementation locks the transport.
+No support claim until the actual client reproduces the flow.
 
-### RF-G5 — Bridge/world-auth completion
+### RF-I7 — Bridge/world-auth
 
-Goal: cross the boundary Tavern never crossed: client login through actual world-server authentication.
+Goal: cross from Gate into an emulator without baking emulator schema into Gate/Core.
 
 Work:
 
-- first emulator adapter selection,
-- realm registration,
-- join-ticket consumption,
-- join-secret/session-key handoff,
-- character counts / last-character integration where useful,
-- end-to-end login → realm list → realm join → world auth fixture.
+- deliberately select first emulator adapter,
+- implement `WorldAuthBridge`,
+- issue/consume join ticket and session material through the adapter contract,
+- expose character-count/last-character data only if the adapter supports it,
+- prove world authentication against the selected emulator.
 
-### RF-G6 — Real-client compatibility matrix
+### RF-I8 — First playable vertical slice
 
-Goal: replace inherited support claims with Realmforge evidence.
+Success criterion:
 
-For every supported build:
+```text
+Realmforge knows one realm
+        ↓
+independent Gate authenticates test identity
+        ↓
+retired client receives realm list
+        ↓
+realm join succeeds
+        ↓
+Bridge/emulator accepts world authentication
+        ↓
+character screen/world entry succeeds
+```
 
-- exact binary/build identity,
-- transport path,
-- login path,
-- BGS service/method trace,
-- realm-list fixture,
-- realm-join fixture,
-- disconnect/error behavior,
-- reconnect behavior,
-- world-auth success,
-- regression capture.
+### RF-I9 — Covered Gate retirement
 
-### RF-G7 — Replace inherited Gate internals
+Goal: remove inherited implementation from the active product tree.
 
-Goal: progressively remove upstream-derived implementation where the reconstruction ledger is sufficient.
+Required before deletion:
 
-Replacement order should be driven by architectural leverage, not cosmetics. The likely late replacement is BGS transport/RPC because it carries the most compatibility value and the least product identity.
+- launch-critical replacement parity proven by Realmforge-owned fixtures,
+- real-client regression green,
+- no active imports from covered code/assets,
+- source/text audit performed,
+- historical license/provenance records remain accurate.
 
-## 3. Parallel product tracks
+Deleting the working tree does not erase historical Git commits. History rewrite, if desired later, is a separate destructive operation requiring explicit owner approval.
 
-Gate is only one part of Realmforge. The following tracks remain separate and must not be improvised from Gate's internals:
+## 3. Interim covered code policy
+
+The existing covered Gate may be run only when needed to:
+
+- keep a temporary interoperability baseline available,
+- compare externally observable behavior,
+- support evidence collection that does not copy implementation.
+
+Do not spend material effort on cosmetic renames, package reshuffling, or product-brand cleanup inside the covered tree unless it directly unblocks a replacement test.
+
+PR #2 was closed without merge for this reason.
+
+## 4. Parallel product tracks
+
+These remain separate from protocol implementation:
 
 ```text
 Core     canonical state/control API
@@ -151,39 +195,16 @@ Client   local client discovery/configuration/launch
 Console  administrator UX
 ```
 
-Their implementation languages/frameworks remain open until their own decisions close.
-
-## 4. First playable vertical slice
-
-The first meaningful Realmforge success criterion is not “the UI loads.” It is:
-
-```text
-Realmforge config knows one realm
-        ↓
-Gate authenticates a known test account
-        ↓
-client receives Realmforge realm list
-        ↓
-client selects Realmforge realm
-        ↓
-Gate issues a join handoff
-        ↓
-Bridge/emulator accepts world authentication
-        ↓
-character screen/world entry succeeds
-```
-
-Everything before that should serve this path or prove a boundary needed by it.
+Do not let the Gate replacement silently settle their language/framework decisions.
 
 ## 5. Current attack list
 
-RF-G1 is complete and RF-G3 has begun. The next highest-value work is:
-
-1. investigate the upstream-referenced 1.13.2.31650 interoperability research corpus and its provenance,
-2. compare first emulator adapter candidates,
-3. close the first adapter decision deliberately,
-4. specify the Gate → Bridge/world-auth handoff contract,
-5. build the first real-client capture fixture,
-6. continue account/OAuth configuration cleanup where it directly supports that path.
-
-RF-G2 branding/identity cleanup continues in parallel, but it must not delay world-auth progress.
+1. Keep independent Gate CI green.
+2. Split the fresh semantic foundation into identity/session/realm/world-auth modules.
+3. Add source-independent fixture schemas and evidence grading.
+4. Implement the standards-based OAuth/OIDC core.
+5. Produce the first Realmforge-owned retired-client capture.
+6. Implement only the BGS surface that capture proves necessary.
+7. Select and implement the first `WorldAuthBridge` adapter.
+8. Reach the first client → character-screen/world-entry path.
+9. Retire covered Gate behavior family by behavior family until it can leave the active tree.
