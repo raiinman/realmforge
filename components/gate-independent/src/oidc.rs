@@ -19,7 +19,11 @@ impl Issuer {
     }
 
     fn endpoint(&self, path: &str) -> String {
-        format!("{}/{}", self.0.trim_end_matches('/'), path.trim_start_matches('/'))
+        format!(
+            "{}/{}",
+            self.0.trim_end_matches('/'),
+            path.trim_start_matches('/')
+        )
     }
 }
 
