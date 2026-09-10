@@ -5,6 +5,7 @@
 //! protocol adapters are added only after behavior is captured independently.
 
 mod account;
+mod authorization_code;
 mod error;
 mod identity;
 mod oauth;
@@ -17,6 +18,7 @@ mod world_auth;
 pub use account::{
     AccountDirectory, AccountId, AccountRecord, AccountStatus, MemoryAccountDirectory,
 };
+pub use authorization_code::{AuthorizationCode, AuthorizationCodeStore};
 pub use error::GateError;
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
 pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
