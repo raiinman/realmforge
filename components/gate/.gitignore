@@ -1,0 +1,21 @@
+# Add directories, files, and symbolic links which should not be stored within
+# the repository here.
+
+# Helper files requiring special attention
+!.gitignore
+!.gitattributes
+
+# Added by cargo
+/target
+
+# SQLx offline query cache — committed so container builds compile without
+# DATABASE_URL (regenerated with `cargo sqlx prepare`).
+
+# Agent instructions — deliberately local until finalized.
+/AGENTS.md
+
+__pycache__
+__pycache__/
+
+# Dev TLS certificates/keys for local client testing (private keys).
+/dev/tls/

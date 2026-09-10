@@ -1,0 +1,6 @@
+# Dev Postgres 16 image for Tavern.
+#
+# The official image creates the POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB
+# on first init (empty data volume). Keep this minimal so the credentials stay
+# controlled by the run wrapper (dev/db.sh), not baked into the image.
+FROM docker.io/library/postgres:16

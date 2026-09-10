@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT enable_text_chat, enable_private_text_chat, only_allow_friend_whispers,\n        enable_voice_chat, enable_voice_chat_speak, enable_friends_management,\n        enable_groups, enable_real_id, enable_friends_of_friends, show_real_id\n        FROM privacy_settings WHERE account_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enable_text_chat",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "enable_private_text_chat",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "only_allow_friend_whispers",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "enable_voice_chat",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "enable_voice_chat_speak",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "enable_friends_management",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "enable_groups",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "enable_real_id",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "enable_friends_of_friends",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "show_real_id",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "59b6a596059c5c0c4639b9c97ac211f019beb5f6cc0f451362f2162d5f3576fa"
+}

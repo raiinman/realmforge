@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE device_authorizations\n         SET approved = TRUE, account_id = $1\n         WHERE UPPER(user_code) = UPPER($2) AND expires_at > NOW()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bbe309770764279cd2b36ad15a7c53114fde37af12c2411f7678b27969de8838"
+}

@@ -1,0 +1,113 @@
+[workspace]
+members = ["crates/*", "bin/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+authors = ["Daniel S. Reichenbach <danielsreichenbach@tuta.com>"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/wowemulation-dev/tavern"
+
+[workspace.dependencies]
+# Internal crates
+tavern-core = { path = "crates/tavern-core" }
+tavern-db = { path = "crates/tavern-db" }
+tavern-oauth = { path = "crates/tavern-oauth" }
+tavern-account = { path = "crates/tavern-account" }
+tavern-bgs = { path = "crates/tavern-bgs" }
+tavern-observability = { path = "crates/tavern-observability" }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Web framework
+axum = { version = "0.8", features = ["multipart"] }
+
+# Database
+sqlx = { version = "0.8", default-features = false, features = [
+  "runtime-tokio-rustls",
+  "postgres",
+  "chrono",
+  "uuid",
+  "migrate",
+  "macros",
+] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+moka = { version = "0.12", features = ["sync"] }
+dashmap = "6"
+
+# Templating
+askama = "0.12"
+
+# Crypto and randomness
+jsonwebtoken = "9"
+rand = "0.8"
+sha2 = "0.10"
+pbkdf2 = "0.12"
+hmac = "0.12"
+digest = "0.10"
+num-bigint = { version = "0.4", features = ["rand"] }
+num-traits = "0.2"
+hex = "0.4"
+# M5: rsa parses PKCS#8 PEM and exposes the public RSA components for JWKS.
+rsa = { version = "0.9", features = ["pem"] }
+base64 = "0.22"
+aes-gcm = "0.10"
+
+# Encrypted email verification tickets
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# OpenTelemetry
+opentelemetry = "0.28"
+opentelemetry_sdk = "0.28"
+opentelemetry-otlp = "0.28"
+
+# Email
+lettre = { version = "0.11", default-features = false, features = [
+  "builder",
+  "smtp-transport",
+  "tokio1-rustls-tls",
+] }
+
+# BGS WebSocket / protobuf
+prost = "0.13"
+bytes = "1"
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+# TLS provider: ring only. tokio-rustls's default features pull in
+# aws-lc-rs (and its -sys C/asm build); sqlx (runtime-tokio-rustls →
+# tls-rustls-ring) and lettre (default-features = false) already use ring,
+# so pinning both here keeps the whole tree free of aws-lc-rs.
+rustls = { version = "0.23", default-features = false, features = [
+  "ring",
+  "logging",
+  "tls12",
+  "std",
+] }
+tokio-rustls = { version = "0.26", default-features = false, features = [
+  "ring",
+  "logging",
+  "tls12",
+] }
+rustls-pemfile = "2"
+chrono = { version = "0.4", default-features = false, features = [
+  "serde",
+  "clock",
+] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[profile.dev]
+# Faster incremental dev builds; backtraces still resolve to line numbers.
+debug = "line-tables-only"

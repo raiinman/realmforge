@@ -1,0 +1,92 @@
+name: Realmforge Gate foundation verification
+
+on:
+  push:
+    branches:
+      - rebuild/realmforge-gate-foundation
+    paths:
+      - .github/workflows/rebuild-gate-foundation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realmforge_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d realmforge_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # REALMFORGE_GATE_DATABASE_URL is the new Gate contract. DATABASE_URL
+      # remains set because inherited DB integration tests still consume it.
+      REALMFORGE_GATE_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/realmforge_gate
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/realmforge_gate
+      SQLX_OFFLINE: "true"
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Check out rebuild branch
+        uses: actions/checkout@v4
+        with:
+          ref: rebuild/realmforge-gate-foundation
+          fetch-depth: 0
+
+      - name: Install Rust 1.97
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.97.0
+
+      - name: Apply typed Realmforge Gate config migration if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN=components/gate/bin/bgs-server/src/main.rs
+          if grep -q '^mod realmforge_config;' "$MAIN"; then
+            echo "typed Gate config already wired"
+          else
+            python3 tools/rebuild_gate_config.py
+          fi
+          rustfmt +1.97.0 --edition 2024 \
+            components/gate/bin/bgs-server/src/main.rs \
+            components/gate/bin/bgs-server/src/realmforge_config.rs
+
+      - name: Prove pinned baseline stayed untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- third_party/gate-upstream/source
+
+      - name: Verify Gate derivative locked
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd components/gate
+          cargo +1.97.0 test --locked -p bgs-server
+          cargo +1.97.0 test --locked --workspace --all-targets
+
+      - name: Commit verified config migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/gate/bin/bgs-server/src/main.rs \
+                  components/gate/bin/bgs-server/src/realmforge_config.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "route Gate runtime through Realmforge config authority"
+          git push origin HEAD:rebuild/realmforge-gate-foundation

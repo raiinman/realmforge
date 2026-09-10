@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, region, is_suspended, is_banned, suspension_expires, game_time_expires FROM game_accounts WHERE account_id = $1 ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "region",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_suspended",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "is_banned",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "suspension_expires",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "game_time_expires",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "b3febc68ae1a9680382b18ee77a75a7f778c7212c64f690aca9ee53b54b4598b"
+}
