@@ -36,6 +36,7 @@ pub enum GateError {
     InvalidAuthorizationGrantLifetime,
     AuthorizationGrantConsumed,
     AuthorizationGrantExpired,
+    InvalidAuthorizationCode,
     AuthorizationCodeNotFound,
     DuplicateAuthorizationCode,
     InvalidAccessToken,
@@ -98,6 +99,7 @@ impl fmt::Display for GateError {
             }
             Self::AuthorizationGrantConsumed => write!(f, "authorization grant was already used"),
             Self::AuthorizationGrantExpired => write!(f, "authorization grant expired"),
+            Self::InvalidAuthorizationCode => write!(f, "authorization code is malformed"),
             Self::AuthorizationCodeNotFound => write!(f, "authorization code not found"),
             Self::DuplicateAuthorizationCode => write!(f, "authorization code collision"),
             Self::InvalidAccessToken => write!(f, "access token is malformed"),
