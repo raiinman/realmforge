@@ -39,6 +39,7 @@ pub enum GateError {
     OAuthClientMismatch,
     OAuthRedirectMismatch,
     PkceVerificationFailed,
+    InvalidIssuer,
     WorldAuthUnavailable,
 }
 
@@ -97,6 +98,7 @@ impl fmt::Display for GateError {
                 write!(f, "redirect URI does not match authorization grant")
             }
             Self::PkceVerificationFailed => write!(f, "PKCE verification failed"),
+            Self::InvalidIssuer => write!(f, "OIDC issuer must not be empty"),
             Self::WorldAuthUnavailable => write!(f, "world authentication is unavailable"),
         }
     }
