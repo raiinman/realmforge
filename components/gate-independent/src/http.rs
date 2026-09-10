@@ -162,7 +162,11 @@ async fn authorize(
     let oidc = query
         .scope
         .as_deref()
-        .filter(|scope| scope.split_ascii_whitespace().any(|value| value == "openid"))
+        .filter(|scope| {
+            scope
+                .split_ascii_whitespace()
+                .any(|value| value == "openid")
+        })
         .map(|_| OidcAuthorizationContext::new(query.nonce));
     let session_id = match session_id_from_headers(&headers) {
         Some(value) => value,
@@ -262,14 +266,11 @@ async fn token(State(state): State<GateHttpState>, Form(form): Form<TokenForm>) 
             Ok(value) => value,
             Err(_) => return server_error(),
         };
-        let issuer = match IdTokenIssuer::new(
-            issuer,
-            state.signing.clone(),
-            ID_TOKEN_LIFETIME_SECONDS,
-        ) {
-            Ok(value) => value,
-            Err(_) => return server_error(),
-        };
+        let issuer =
+            match IdTokenIssuer::new(issuer, state.signing.clone(), ID_TOKEN_LIFETIME_SECONDS) {
+                Ok(value) => value,
+                Err(_) => return server_error(),
+            };
         match issuer.issue(
             &response.subject,
             &response.client_id,
@@ -564,10 +565,8 @@ mod tests {
         let id_token = token_json["id_token"].as_str().unwrap();
         let parts: Vec<_> = id_token.split('.').collect();
         assert_eq!(parts.len(), 3);
-        let claims: serde_json::Value = serde_json::from_slice(
-            &URL_SAFE_NO_PAD.decode(parts[1]).unwrap(),
-        )
-        .unwrap();
+        let claims: serde_json::Value =
+            serde_json::from_slice(&URL_SAFE_NO_PAD.decode(parts[1]).unwrap()).unwrap();
         assert_eq!(claims["iss"], "https://gate.realmforge.test");
         assert_eq!(claims["sub"], "subject-1");
         assert_eq!(claims["aud"], "client-1");
