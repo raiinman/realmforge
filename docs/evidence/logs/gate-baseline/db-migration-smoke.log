@@ -30,9 +30,9 @@
    Compiling sqlx-core v0.8.6
    Compiling chrono v0.4.45
    Compiling uuid v1.23.3
+   Compiling toml_datetime v0.6.11
    Compiling sqlx-postgres v0.8.6
    Compiling serde_spanned v0.6.9
-   Compiling toml_datetime v0.6.11
    Compiling num-bigint v0.4.6
    Compiling toml_edit v0.22.27
    Compiling tokio-stream v0.1.18
@@ -40,17 +40,17 @@
    Compiling simple_asn1 v0.6.4
    Compiling num-bigint-dig v0.8.6
    Compiling jsonwebtoken v9.3.1
-   Compiling sqlx-macros v0.8.6
    Compiling rsa v0.9.10
+   Compiling sqlx-macros v0.8.6
    Compiling toml v0.8.23
    Compiling tavern-core v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-core)
    Compiling sqlx v0.8.6
    Compiling tavern-db v0.1.0 (/home/runner/work/realmforge/realmforge/third_party/gate-upstream/source/crates/tavern-db)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.42s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 14.72s
      Running unittests src/lib.rs (target/debug/deps/tavern_db-e16a35e90116e8fd)
 
 running 1 test
 test tests::migrations_apply_and_round_trip ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.09s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.07s
 
