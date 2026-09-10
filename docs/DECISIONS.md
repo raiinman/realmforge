@@ -103,6 +103,13 @@ Until Core exposes the canonical registry over an explicit service contract, Gat
 
 Exact build profiles are required by default. An unsafe compatibility override may exist for research, but it must be opt-in and must never count as a support claim.
 
+## D-0018 — Realmforge-prefixed Gate configuration is authoritative
+
+**Status:** LOCKED FOR INTERIM GATE  
+**Decision:** New Gate runtime configuration uses explicit `REALMFORGE_GATE_*` names. Inherited Tavern-era environment names may remain temporarily as migration aliases, but Realmforge-prefixed values take precedence and use of a legacy alias must be observable.
+
+This configuration authority is scoped to Gate. It does not decide Core's storage technology, deployment model, or Core ↔ Gate transport.
+
 ---
 
 # Pending decisions
