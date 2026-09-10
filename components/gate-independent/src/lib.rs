@@ -13,6 +13,7 @@ mod oauth;
 mod oauth_client;
 mod oauth_service;
 mod oidc;
+mod oidc_token;
 mod realm;
 mod session;
 mod signing;
@@ -35,6 +36,7 @@ pub use oauth_service::{
     AuthorizationRequest, AuthorizationResult, OAuthService, TokenExchangeRequest, TokenResponse,
 };
 pub use oidc::{Issuer, ProviderMetadata};
+pub use oidc_token::IdTokenIssuer;
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
 pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
 pub use signing::{JsonWebKey, JsonWebKeySet, OidcSigningAuthority};
