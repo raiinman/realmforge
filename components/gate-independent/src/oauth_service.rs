@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     AccessToken, AccessTokenStore, AuthorizationCode, AuthorizationCodeStore, ClientId, GateError,
     IdentitySubject, OAuthClientRegistry, PkceCodeVerifier, PkceS256Challenge, RedirectUri,
@@ -9,6 +11,8 @@ pub struct AuthorizationRequest {
     pub redirect_uri: RedirectUri,
     pub pkce_challenge: PkceS256Challenge,
     pub state: Option<String>,
+    pub scopes: Vec<String>,
+    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +35,10 @@ pub struct TokenResponse {
     pub access_token: AccessToken,
     pub token_type: &'static str,
     pub expires_in: u64,
+    pub subject: IdentitySubject,
+    pub client_id: ClientId,
+    pub scopes: Vec<String>,
+    pub nonce: Option<String>,
 }
 
 impl std::fmt::Debug for TokenResponse {
@@ -39,8 +47,17 @@ impl std::fmt::Debug for TokenResponse {
             .field("access_token", &"[REDACTED]")
             .field("token_type", &self.token_type)
             .field("expires_in", &self.expires_in)
+            .field("client_id", &self.client_id)
+            .field("scopes", &self.scopes)
+            .field("nonce", &self.nonce.as_ref().map(|_| "[PRESENT]"))
             .finish()
     }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct AuthorizationContext {
+    scopes: Vec<String>,
+    nonce: Option<String>,
 }
 
 /// Realmforge's standards-derived OAuth authorization-code core.
@@ -53,6 +70,7 @@ pub struct OAuthService {
     clients: OAuthClientRegistry,
     codes: AuthorizationCodeStore,
     tokens: AccessTokenStore,
+    authorization_contexts: BTreeMap<[u8; 32], AuthorizationContext>,
     code_lifetime_seconds: u64,
     access_token_lifetime_seconds: u64,
 }
@@ -73,6 +91,7 @@ impl OAuthService {
             clients,
             codes: AuthorizationCodeStore::default(),
             tokens: AccessTokenStore::default(),
+            authorization_contexts: BTreeMap::new(),
             code_lifetime_seconds,
             access_token_lifetime_seconds,
         })
@@ -84,25 +103,35 @@ impl OAuthService {
         request: AuthorizationRequest,
         now_unix: u64,
     ) -> Result<AuthorizationResult, GateError> {
-        self.clients
-            .validate_redirect(&request.client_id, &request.redirect_uri)?;
+        let AuthorizationRequest {
+            client_id,
+            redirect_uri,
+            pkce_challenge,
+            state,
+            scopes,
+            nonce,
+        } = request;
+
+        self.clients.validate_redirect(&client_id, &redirect_uri)?;
         let expires_at_unix = now_unix
             .checked_add(self.code_lifetime_seconds)
             .ok_or(GateError::InvalidAuthorizationGrantLifetime)?;
         let grant = self.clients.create_authorization_grant(
             subject,
-            request.client_id,
-            request.redirect_uri.clone(),
-            request.pkce_challenge,
+            client_id,
+            redirect_uri.clone(),
+            pkce_challenge,
             now_unix,
             expires_at_unix,
         )?;
         let code = self.codes.issue(grant);
+        self.authorization_contexts
+            .insert(code.digest(), AuthorizationContext { scopes, nonce });
 
         Ok(AuthorizationResult {
             code,
-            redirect_uri: request.redirect_uri,
-            state: request.state,
+            redirect_uri,
+            state,
         })
     }
 
@@ -111,6 +140,12 @@ impl OAuthService {
         request: TokenExchangeRequest,
         now_unix: u64,
     ) -> Result<TokenResponse, GateError> {
+        let digest = request.code.digest();
+        let context = self
+            .authorization_contexts
+            .get(&digest)
+            .cloned()
+            .unwrap_or_default();
         let subject = self.codes.redeem(
             &request.code,
             now_unix,
@@ -118,14 +153,22 @@ impl OAuthService {
             &request.redirect_uri,
             &request.verifier,
         )?;
-        let access_token =
-            self.tokens
-                .issue(subject, now_unix, self.access_token_lifetime_seconds)?;
+        self.authorization_contexts.remove(&digest);
+
+        let access_token = self.tokens.issue(
+            subject.clone(),
+            now_unix,
+            self.access_token_lifetime_seconds,
+        )?;
 
         Ok(TokenResponse {
             access_token,
             token_type: "Bearer",
             expires_in: self.access_token_lifetime_seconds,
+            subject,
+            client_id: request.client_id,
+            scopes: context.scopes,
+            nonce: context.nonce,
         })
     }
 
@@ -164,6 +207,8 @@ mod tests {
             redirect_uri: RedirectUri::new("https://client.example/callback").unwrap(),
             pkce_challenge: PkceS256Challenge::from_verifier(verifier),
             state: Some("opaque-client-state".to_owned()),
+            scopes: vec!["openid".to_owned(), "profile".to_owned()],
+            nonce: Some("client-nonce".to_owned()),
         }
     }
 
@@ -194,6 +239,10 @@ mod tests {
 
         assert_eq!(token.token_type, "Bearer");
         assert_eq!(token.expires_in, 3600);
+        assert_eq!(token.subject.as_str(), "subject-1");
+        assert_eq!(token.client_id.as_str(), "client-1");
+        assert_eq!(token.scopes, ["openid", "profile"]);
+        assert_eq!(token.nonce.as_deref(), Some("client-nonce"));
         assert_eq!(
             service
                 .resolve_access_token(&token.access_token, 111)
@@ -245,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn wrong_verifier_does_not_destroy_valid_code() {
+    fn wrong_verifier_does_not_destroy_valid_code_or_openid_context() {
         let verifier = PkceCodeVerifier::new(VERIFIER).unwrap();
         let mut service = service();
         let result = service
@@ -272,7 +321,7 @@ mod tests {
             GateError::PkceVerificationFailed
         );
 
-        service
+        let token = service
             .exchange_authorization_code(
                 TokenExchangeRequest {
                     code: AuthorizationCode::parse(code_text).unwrap(),
@@ -283,6 +332,8 @@ mod tests {
                 111,
             )
             .unwrap();
+        assert_eq!(token.scopes, ["openid", "profile"]);
+        assert_eq!(token.nonce.as_deref(), Some("client-nonce"));
     }
 
     #[test]
@@ -294,6 +345,8 @@ mod tests {
             redirect_uri: RedirectUri::new("https://evil.example/callback").unwrap(),
             pkce_challenge: PkceS256Challenge::from_verifier(&verifier),
             state: None,
+            scopes: vec!["openid".to_owned()],
+            nonce: None,
         };
         assert_eq!(
             service
