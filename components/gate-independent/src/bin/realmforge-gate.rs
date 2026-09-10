@@ -19,7 +19,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let issuer = Issuer::new(issuer)?;
     let metadata = ProviderMetadata::authorization_code(&issuer);
     let oauth = OAuthService::new(oauth_clients_from_env()?, 60, 3600)?;
-    let mut state = GateHttpState::new(metadata, oauth, SessionRegistry::default(), signing.clone());
+    let mut state =
+        GateHttpState::new(metadata, oauth, SessionRegistry::default(), signing.clone());
     let native_login = native_login_from_env()?;
     if let Some(service) = native_login {
         state = state.with_native_login(service);
