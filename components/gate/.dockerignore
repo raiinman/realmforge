@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Exclude build artifacts and local state from the container build context.
+# .sqlx/ must be INCLUDED — the sqlx macros need the offline query cache at
+# compile time (no DATABASE_URL at build).
+
+.git
+target
+node_modules
+.venv
+.playwright-cli
+load-test/.venv
+__pycache__
+*.pyc
+/tmp

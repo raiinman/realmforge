@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+        <title>Create Account - Tavern</title>
+        <link rel="stylesheet" href="/static/style.css" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    </head>
+    <body class="page-center">
+        <div class="card">
+            <div style="text-align:center;margin-bottom: var(--space-md)">
+                <img class="logo-mark logo-on-light"
+                    src="/static/tavern-logo-light.png" width="64" height="64"
+                    alt="Tavern" />
+                <img class="logo-mark logo-on-dark"
+                    src="/static/tavern-logo-dark.png" width="64" height="64"
+                    alt="Tavern" />
+            </div>
+            <h1>Create Account</h1>
+            <p>Create a free Tavern account.</p>
+
+            <!-- Step 1: Get started -->
+            <form
+                id="step-get-started"
+                onsubmit="handleStep(event, 'get-started')"
+            >
+                <div class="form-group">
+                    <label for="country">Country / Region</label>
+                    <select id="country" name="country" required>
+                        <option value="US">United States</option>
+                        <option value="DE">Germany</option>
+                        <option value="KR">South Korea</option>
+                        <option value="TH">Thailand</option>
+                        <option value="JP">Japan</option>
+                        <option value="TW">Taiwan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dob-year">Year of Birth</label>
+                    <input
+                        type="number"
+                        id="dob-year"
+                        name="dob-year"
+                        placeholder="1990"
+                        min="1900"
+                        max="2024"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="dob-month">Month of Birth</label>
+                    <input
+                        type="number"
+                        id="dob-month"
+                        name="dob-month"
+                        placeholder="01"
+                        min="1"
+                        max="12"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="dob-day">Day of Birth</label>
+                    <input
+                        type="number"
+                        id="dob-day"
+                        name="dob-day"
+                        placeholder="15"
+                        min="1"
+                        max="31"
+                        required
+                    />
+                </div>
+                <button type="submit" class="btn btn-primary">Continue</button>
+                <div class="form-error hidden" id="error-get-started"></div>
+            </form>
+
+            <!-- Step 2: Name -->
+            <form
+                id="step-provide-name"
+                class="hidden"
+                onsubmit="handleStep(event, 'provide-name')"
+            >
+                <div class="form-group">
+                    <label for="first-name">First Name</label>
+                    <input
+                        type="text"
+                        id="first-name"
+                        name="firstName"
+                        required
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="last-name">Last Name</label>
+                    <input
+                        type="text"
+                        id="last-name"
+                        name="lastName"
+                        required
+                    />
+                </div>
+                <button type="submit" class="btn btn-primary">Continue</button>
+                <div class="form-error hidden" id="error-provide-name"></div>
+            </form>
+
+            <!-- Step 3: Credentials -->
+            <form
+                id="step-provide-credentials"
+                class="hidden"
+                onsubmit="handleStep(event, 'provide-credentials')"
+            >
+                <div class="form-group">
+                    <label for="creation-email">Email</label>
+                    <input
+                        type="email"
+                        id="creation-email"
+                        name="email"
+                        required
+                        autocomplete="email"
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone (optional)</label>
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone-number"
+                        autocomplete="tel"
+                    />
+                </div>
+                <button type="submit" class="btn btn-primary">Continue</button>
+                <div
+                    class="form-error hidden"
+                    id="error-provide-credentials"
+                ></div>
+            </form>
+
+            <!-- Step 4: Password -->
+            <form
+                id="step-set-password"
+                class="hidden"
+                onsubmit="handleStep(event, 'set-password')"
+            >
+                <div class="form-group">
+                    <label for="creation-password">Password</label>
+                    <input
+                        type="password"
+                        id="creation-password"
+                        name="password"
+                        minlength="8"
+                        required
+                        autocomplete="new-password"
+                    />
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    Create Account
+                </button>
+                <div class="form-error hidden" id="error-set-password"></div>
+            </form>
+
+            <p class="card-footer-link">
+                Already have an account?
+                <a href="/login/en/" class="link">Sign in</a>
+            </p>
+        </div>
+
+        <script>
+            let csrfToken = "";
+            let sessionId = "";
+
+            async function init() {
+                csrfToken = "{{ csrf_token }}";
+                sessionId = "{{ session_id }}";
+                document
+                    .getElementById("step-get-started")
+                    .classList.remove("hidden");
+            }
+
+            async function handleStep(event, step) {
+                event.preventDefault();
+                const form = event.target;
+                const errorDiv = document.getElementById("error-" + step);
+                errorDiv.classList.add("hidden");
+
+                // Send as multipart/form-data (matching the capture).
+                const fd = new FormData(form);
+                fd.append("_csrf", csrfToken);
+
+                try {
+                    const resp = await fetch(
+                        "/creation/flow/creation-full/step/" + step,
+                        {
+                            method: "POST",
+                            body: fd,
+                        },
+                    );
+                    const json = await resp.json();
+
+                    if (json.error) {
+                        errorDiv.textContent = json.error;
+                        errorDiv.classList.remove("hidden");
+                        return;
+                    }
+
+                    if (json.csrfToken) csrfToken = json.csrfToken;
+
+                    if (step === "get-started") {
+                        toggleForm("step-get-started", "step-provide-name");
+                    } else if (step === "provide-name") {
+                        toggleForm(
+                            "step-provide-name",
+                            "step-provide-credentials",
+                        );
+                    } else if (step === "provide-credentials") {
+                        toggleForm(
+                            "step-provide-credentials",
+                            "step-set-password",
+                        );
+                    } else if (step === "set-password") {
+                        window.location.href = "/login/en/";
+                    }
+                } catch (e) {
+                    errorDiv.textContent =
+                        "An error occurred. Please try again.";
+                    errorDiv.classList.remove("hidden");
+                    console.error(e);
+                }
+            }
+
+            function toggleForm(hideId, showId) {
+                document.getElementById(hideId).classList.add("hidden");
+                document.getElementById(showId).classList.remove("hidden");
+            }
+
+            init();
+        </script>
+    </body>
+</html>

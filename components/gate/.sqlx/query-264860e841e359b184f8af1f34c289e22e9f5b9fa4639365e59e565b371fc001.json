@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO credentials\n            (account_id, srp_salt, srp_verifier, srp_iterations, srp_version, sha_pass_hash)\n        VALUES ($1, $2, $3, $4, $5, $6)\n        ON CONFLICT (account_id) DO UPDATE SET\n            srp_salt = EXCLUDED.srp_salt,\n            srp_verifier = EXCLUDED.srp_verifier,\n            srp_iterations = EXCLUDED.srp_iterations,\n            srp_version = EXCLUDED.srp_version,\n            sha_pass_hash = EXCLUDED.sha_pass_hash,\n            updated_at = NOW()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bytea",
+        "Bytea",
+        "Int4",
+        "Int2",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "264860e841e359b184f8af1f34c289e22e9f5b9fa4639365e59e565b371fc001"
+}

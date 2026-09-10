@@ -1,0 +1,22 @@
+[project]
+name = "tavern-test"
+version = "0.1.0"
+description = "Tavern BGS and SRP test clients"
+requires-python = ">=3.10"
+
+dependencies = ["protobuf>=5", "websocket-client>=1.8", "pycountry>=24.6"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E402"]              # module-level import not at top (path manipulation)
+
+[tool.pyright]
+typeCheckingMode = "basic"

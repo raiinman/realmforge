@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM communication_preferences WHERE account_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "account_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "receive_targeted_ads",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "receive_blizzard_offers",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "enable_personalized_recommendations",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "limited_descriptions",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "world_of_warcraft_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "warcraft_rumble_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "diablo_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "overwatch_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "hearthstone_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "call_of_duty_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "blizzard_classics_communications",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "surveys_communication",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "xbox_communications",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e50d0b48e4fbddb6a1dfe17920ac808d964fd285cc39be301ce7a036991691c6"
+}

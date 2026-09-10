@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Account - Tavern</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <!-- Skip link for keyboard accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <div class="top-bar">
+      <div style="display:flex;align-items:center;gap:var(--space-md)">
+        <button
+          id="hamburger"
+          class="hamburger"
+          aria-label="Toggle navigation menu"
+          aria-expanded="false"
+        >
+          &#9776;
+        </button>
+        <span class="brand">Tavern</span>
+      </div>
+      <div class="user-info">
+        <span class="battletag" id="header-battletag"></span>
+        <button id="logout-btn" class="btn btn-secondary">Log out</button>
+      </div>
+      <!-- Centered emblem crest that overhangs the top bar's bottom edge. -->
+      <div class="top-bar-crest" aria-hidden="true">
+        <img class="logo-mark logo-on-light" src="/static/tavern-logo-light.png"
+          alt="" />
+        <img class="logo-mark logo-on-dark" src="/static/tavern-logo-dark.png"
+          alt="" />
+      </div>
+    </div>
+
+    <div class="layout">
+      <nav
+        class="sidebar"
+        id="sidebar"
+        role="navigation"
+        aria-label="Account navigation"
+      >
+        <a href="#" data-page="overview" class="active">Overview</a>
+        <a href="#" data-page="games">Games &amp; Subs</a>
+        <a href="#" data-page="security">Security</a>
+        <a href="#" data-page="details">Account Details</a>
+        <a href="#" data-page="privacy">Privacy</a>
+      </nav>
+
+      <main class="content" id="main-content" role="main">
+        <div class="loading">
+          <span class="spinner"></span>
+          Loading&#x2026;
+        </div>
+      </main>
+    </div>
+
+    <footer class="footer" role="contentinfo">
+      <a href="https://github.com/wowemulation-dev/tavern">Tavern</a>
+      is free software under the AGPL 3.0 license.<br />
+      <a href="https://github.com/wowemulation-dev/tavern">Support</a>
+    </footer>
+
+    <script src="/static/spa.js"></script>
+  </body>
+</html>

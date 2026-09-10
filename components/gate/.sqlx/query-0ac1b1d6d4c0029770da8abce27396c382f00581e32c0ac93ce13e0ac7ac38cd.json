@@ -1,0 +1,140 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO accounts (email)\n        VALUES ($1)\n        RETURNING id, email, email_verified, battletag, country_code, country_id,\n                  region, locale, first_name, last_name, birth_date, mobile_number,\n                  street1, street2, city, state, postal_code,\n                  created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email_verified",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "battletag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "country_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "country_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "region",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 7,
+        "name": "locale",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "birth_date",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "mobile_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "street1",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "street2",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "postal_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "0ac1b1d6d4c0029770da8abce27396c382f00581e32c0ac93ce13e0ac7ac38cd"
+}
