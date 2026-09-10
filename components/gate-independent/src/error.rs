@@ -52,6 +52,8 @@ pub enum GateError {
     SigningKeyGenerationFailed,
     SigningFailed,
     SigningKeyEncodingFailed,
+    InvalidIdTokenLifetime,
+    IdTokenEncodingFailed,
     WorldAuthUnavailable,
 }
 
@@ -123,6 +125,8 @@ impl fmt::Display for GateError {
             Self::SigningKeyGenerationFailed => write!(f, "OIDC signing key generation failed"),
             Self::SigningFailed => write!(f, "OIDC signing operation failed"),
             Self::SigningKeyEncodingFailed => write!(f, "OIDC signing key encoding failed"),
+            Self::InvalidIdTokenLifetime => write!(f, "OIDC ID-token lifetime is invalid"),
+            Self::IdTokenEncodingFailed => write!(f, "OIDC ID-token encoding failed"),
             Self::WorldAuthUnavailable => write!(f, "world authentication is unavailable"),
         }
     }
