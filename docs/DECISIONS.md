@@ -83,7 +83,7 @@ A bounded interim Gate rebuild is allowed before D0 closes when it stays behind 
 ## D-0015 — Covered Gate working derivative
 
 **Status:** LOCKED  
-**Decision:** The pinned upstream Tavern snapshot under `third_party/gate-upstream/source/` remains an untouched evidence baseline. Realmforge's interim production modifications occur in `components/gate/`, which is explicitly a **covered AGPL-3.0-only derivative** of the pinned upstream implementation.
+**Decision:** The pinned upstream compatibility snapshot under `third_party/gate-upstream/source/` remains an untouched evidence baseline. Realmforge's interim production modifications occur in `components/gate/`, which is explicitly a **covered AGPL-3.0-only derivative** of the pinned upstream implementation.
 
 `components/gate/` must retain required upstream license/provenance. Renaming or refactoring this tree does not make it independently owned.
 
@@ -92,7 +92,7 @@ A bounded interim Gate rebuild is allowed before D0 closes when it stays behind 
 ## D-0016 — Realm registry enters Gate through a projection boundary
 
 **Status:** LOCKED FOR INTERIM GATE  
-**Decision:** Tavern's hard-coded single-realm BGS behavior is not Realmforge architecture. Gate will resolve realm-list and realm-join behavior through a Realmforge-named registry/projection layer.
+**Decision:** The inherited hard-coded single-realm BGS behavior is not Realmforge architecture. Gate resolves realm-list and realm-join behavior through a Realmforge-named registry/projection layer.
 
 Until Core exposes the canonical registry over an explicit service contract, Gate may load a temporary local projection from Realmforge-specific configuration. That temporary configuration is not the canonical Core Realm model and must remain replaceable.
 
@@ -106,9 +106,27 @@ Exact build profiles are required by default. An unsafe compatibility override m
 ## D-0018 — Realmforge-prefixed Gate configuration is authoritative
 
 **Status:** LOCKED FOR INTERIM GATE  
-**Decision:** New Gate runtime configuration uses explicit `REALMFORGE_GATE_*` names. Inherited Tavern-era environment names may remain temporarily as migration aliases, but Realmforge-prefixed values take precedence and use of a legacy alias must be observable.
+**Decision:** New Gate runtime configuration uses explicit `REALMFORGE_GATE_*` names. Inherited environment names may remain temporarily as migration aliases, but Realmforge-prefixed values take precedence and use of a legacy alias must be observable.
 
 This configuration authority is scoped to Gate. It does not decide Core's storage technology, deployment model, or Core ↔ Gate transport.
+
+## D-0019 — First Bridge adapter target
+
+**Status:** LOCKED FOR FIRST PLAYABLE SLICE  
+**Decision:** Realmforge's first Bridge/world-auth adapter target is the **TrinityCoreClassic 1.14.0.40618 family**.
+
+The first validation line is the public `Frostshake/TrinityCoreClassic` `vanilla_classic` family observed at commit `1fc8f1ebe3d09fcb67194b99d0281f88188b4a0e`. Realmforge may move the exact validation pin to a demonstrably better-maintained compatible fork without changing this architectural decision, provided the 40618 world-auth contract is reverified.
+
+Reasons:
+
+- it advertises native 1.14.0.40618 client support rather than requiring a modern-to-legacy world proxy,
+- its world-auth path is inspectable and directly consumes a 64-byte BNet session key, matching Gate's current client session-key material,
+- the client's realm-join ticket maps to the emulator game-account username, giving Bridge a narrow explicit projection problem instead of making Gate emulate a second world protocol,
+- selecting one first adapter closes an implementation blocker without making that emulator's schema canonical Realmforge state.
+
+This is **not** a Realmforge client support claim. Support still requires a reproducible real-client login → realm list → realm join → world authentication → character/world-entry fixture.
+
+**Closes:** P-004.
 
 ---
 
@@ -121,7 +139,7 @@ These remain open and must not be filled implicitly:
 | P-001 | First production implementation language(s) outside the inherited Gate derivative | OPEN |
 | P-002 | Desktop launcher framework | OPEN |
 | P-003 | Core API framework | OPEN |
-| P-004 | First emulator core/adaptor target | OPEN |
+| P-004 | First emulator core/adapter target | **CLOSED — D-0019** |
 | P-005 | Interim third-party Gate import method | **CLOSED — D-0015** |
 | P-006 | Whether desktop-app compatibility is launch-critical | OPEN |
 | P-007 | Homelab-only versus public-hosting security profile at M1 | OPEN |
