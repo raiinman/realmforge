@@ -15,6 +15,7 @@ mod oauth_service;
 mod oidc;
 mod realm;
 mod session;
+mod signing;
 mod token;
 mod world_auth;
 
@@ -36,5 +37,6 @@ pub use oauth_service::{
 pub use oidc::{Issuer, ProviderMetadata};
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
 pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
+pub use signing::{JsonWebKey, JsonWebKeySet, OidcSigningAuthority};
 pub use token::{AccessToken, AccessTokenRecord, AccessTokenStore};
 pub use world_auth::{WorldAuthBridge, WorldAuthGrant, WorldAuthRequest};

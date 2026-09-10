@@ -48,6 +48,10 @@ pub enum GateError {
     OAuthRedirectMismatch,
     PkceVerificationFailed,
     InvalidIssuer,
+    InvalidSigningKey,
+    SigningKeyGenerationFailed,
+    SigningFailed,
+    SigningKeyEncodingFailed,
     WorldAuthUnavailable,
 }
 
@@ -115,6 +119,10 @@ impl fmt::Display for GateError {
             }
             Self::PkceVerificationFailed => write!(f, "PKCE verification failed"),
             Self::InvalidIssuer => write!(f, "OIDC issuer must not be empty"),
+            Self::InvalidSigningKey => write!(f, "OIDC signing key is invalid"),
+            Self::SigningKeyGenerationFailed => write!(f, "OIDC signing key generation failed"),
+            Self::SigningFailed => write!(f, "OIDC signing operation failed"),
+            Self::SigningKeyEncodingFailed => write!(f, "OIDC signing key encoding failed"),
             Self::WorldAuthUnavailable => write!(f, "world authentication is unavailable"),
         }
     }

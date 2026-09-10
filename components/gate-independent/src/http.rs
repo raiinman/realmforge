@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    AuthorizationCode, AuthorizationRequest, ClientId, GateError, OAuthClientRegistry,
-    OAuthService, PkceCodeVerifier, PkceS256Challenge, ProviderMetadata, RedirectUri, SessionId,
-    SessionRegistry, TokenExchangeRequest,
+    AuthorizationCode, AuthorizationRequest, ClientId, GateError, JsonWebKeySet,
+    OAuthClientRegistry, OAuthService, OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge,
+    ProviderMetadata, RedirectUri, SessionId, SessionRegistry, TokenExchangeRequest,
 };
 
 pub const GATE_SESSION_COOKIE: &str = "realmforge_session";
@@ -28,13 +28,20 @@ struct GateHttpRuntime {
 #[derive(Debug, Clone)]
 pub struct GateHttpState {
     metadata: ProviderMetadata,
+    signing: OidcSigningAuthority,
     runtime: Arc<Mutex<GateHttpRuntime>>,
 }
 
 impl GateHttpState {
-    pub fn new(metadata: ProviderMetadata, oauth: OAuthService, sessions: SessionRegistry) -> Self {
+    pub fn new(
+        metadata: ProviderMetadata,
+        oauth: OAuthService,
+        sessions: SessionRegistry,
+        signing: OidcSigningAuthority,
+    ) -> Self {
         Self {
             metadata,
+            signing,
             runtime: Arc::new(Mutex::new(GateHttpRuntime { oauth, sessions })),
         }
     }
@@ -78,13 +85,14 @@ struct OAuthErrorResponse {
     error_description: &'static str,
 }
 
-pub fn gate_http_router(metadata: ProviderMetadata) -> Router {
+pub fn gate_http_router(metadata: ProviderMetadata, signing: OidcSigningAuthority) -> Router {
     let oauth = OAuthService::new(OAuthClientRegistry::default(), 60, 3600)
         .expect("fixed OAuth lifetimes are non-zero");
     gate_http_router_with_state(GateHttpState::new(
         metadata,
         oauth,
         SessionRegistry::default(),
+        signing,
     ))
 }
 
@@ -92,6 +100,7 @@ pub fn gate_http_router_with_state(state: GateHttpState) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/.well-known/openid-configuration", get(discovery))
+        .route("/jwks.json", get(jwks))
         .route("/authorize", get(authorize))
         .route("/token", post(token))
         .with_state(state)
@@ -106,6 +115,10 @@ async fn health() -> Json<HealthResponse> {
 
 async fn discovery(State(state): State<GateHttpState>) -> Json<ProviderMetadata> {
     Json(state.metadata)
+}
+
+async fn jwks(State(state): State<GateHttpState>) -> Json<JsonWebKeySet> {
+    Json(state.signing.jwks())
 }
 
 async fn authorize(
@@ -326,6 +339,10 @@ mod tests {
         ProviderMetadata::authorization_code(&Issuer::new("https://gate.realmforge.test").unwrap())
     }
 
+    fn signing() -> OidcSigningAuthority {
+        OidcSigningAuthority::generate_2048().unwrap()
+    }
+
     fn seeded_router() -> Router {
         let client = OAuthClient::new(
             ClientId::new("client-1").unwrap(),
@@ -340,7 +357,7 @@ mod tests {
             .authenticate(IdentitySubject::new("subject-1").unwrap())
             .unwrap();
         sessions.insert(session).unwrap();
-        gate_http_router_with_state(GateHttpState::new(metadata(), oauth, sessions))
+        gate_http_router_with_state(GateHttpState::new(metadata(), oauth, sessions, signing()))
     }
 
     fn authorize_uri(redirect_uri: &str) -> String {
@@ -381,6 +398,7 @@ mod tests {
             expected.clone(),
             OAuthService::new(OAuthClientRegistry::default(), 60, 3600).unwrap(),
             SessionRegistry::default(),
+            signing(),
         );
 
         let Json(actual) = discovery(State(state)).await;
@@ -388,8 +406,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn jwks_returns_active_rs256_public_key() {
+        let authority = signing();
+        let expected_kid = authority.key_id().to_owned();
+        let state = GateHttpState::new(
+            metadata(),
+            OAuthService::new(OAuthClientRegistry::default(), 60, 3600).unwrap(),
+            SessionRegistry::default(),
+            authority,
+        );
+
+        let Json(actual) = jwks(State(state)).await;
+        assert_eq!(actual.keys.len(), 1);
+        assert_eq!(actual.keys[0].kid, expected_kid);
+        assert_eq!(actual.keys[0].kty, "RSA");
+        assert_eq!(actual.keys[0].alg, "RS256");
+        assert_eq!(actual.keys[0].key_use, "sig");
+    }
+
+    #[tokio::test]
     async fn authorize_fails_closed_without_authenticated_session() {
-        let response = gate_http_router(metadata())
+        let response = gate_http_router(metadata(), signing())
             .oneshot(
                 Request::builder()
                     .uri(authorize_uri("https://client.example/callback"))
