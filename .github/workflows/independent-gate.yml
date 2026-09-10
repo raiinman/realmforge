@@ -20,6 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enforce independent source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'components/gate/|third_party/gate-upstream|tavern' components/gate-independent; then
+            echo 'Independent Gate must not reference the covered implementation or frozen upstream tree.' >&2
+            exit 1
+          fi
       - name: Install Rust 1.97
         run: |
           rustup toolchain install 1.97.0 --profile minimal
