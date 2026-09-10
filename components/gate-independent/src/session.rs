@@ -1,5 +1,8 @@
 use std::collections::BTreeMap;
 
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use rand::{RngCore, rngs::OsRng};
+
 use crate::{GateError, IdentitySubject};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -13,6 +16,12 @@ impl SessionId {
             return Err(GateError::InvalidSessionId);
         }
         Ok(Self(trimmed.to_owned()))
+    }
+
+    pub fn generate() -> Self {
+        let mut bytes = [0u8; 32];
+        OsRng.fill_bytes(&mut bytes);
+        Self(URL_SAFE_NO_PAD.encode(bytes))
     }
 
     pub fn as_str(&self) -> &str {
@@ -103,6 +112,15 @@ impl SessionRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generated_session_ids_are_opaque_and_distinct() {
+        let first = SessionId::generate();
+        let second = SessionId::generate();
+        assert_eq!(first.as_str().len(), 43);
+        assert_eq!(second.as_str().len(), 43);
+        assert_ne!(first, second);
+    }
 
     #[test]
     fn session_transitions_created_to_authenticated_to_closed() {

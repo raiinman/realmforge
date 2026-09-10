@@ -9,6 +9,7 @@ mod authorization_code;
 mod error;
 mod http;
 mod identity;
+mod native_login;
 mod oauth;
 mod oauth_client;
 mod oauth_service;
@@ -30,6 +31,10 @@ pub use http::{
     gate_http_router_with_state,
 };
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
+pub use native_login::{
+    LoginName, MemoryNativeCredentialStore, NativeCredential, NativeLoginService,
+    hash_native_password,
+};
 pub use oauth::{
     AuthorizationGrant, ClientId, OidcAuthorizationContext, PkceCodeVerifier, PkceS256Challenge,
     RedeemedAuthorizationGrant, RedirectUri,

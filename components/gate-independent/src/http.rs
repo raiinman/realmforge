@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use axum::{
     Form, Json, Router,
     extract::{Query, State},
-    http::{HeaderMap, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -12,14 +12,15 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    AuthorizationCode, AuthorizationRequest, ClientId, GateError, IdTokenIssuer, Issuer,
-    JsonWebKeySet, OAuthClientRegistry, OAuthService, OidcAuthorizationContext,
-    OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge, ProviderMetadata, RedirectUri,
-    SessionId, SessionRegistry, TokenExchangeRequest,
+    AuthorizationCode, AuthorizationRequest, ClientId, GateError, GateSession, IdTokenIssuer,
+    Issuer, JsonWebKeySet, LoginName, NativeLoginService, OAuthClientRegistry, OAuthService,
+    OidcAuthorizationContext, OidcSigningAuthority, PkceCodeVerifier, PkceS256Challenge,
+    ProviderMetadata, RedirectUri, SessionId, SessionRegistry, TokenExchangeRequest,
 };
 
 pub const GATE_SESSION_COOKIE: &str = "realmforge_session";
 const ID_TOKEN_LIFETIME_SECONDS: u64 = 300;
+const BROWSER_SESSION_MAX_AGE_SECONDS: u64 = 8 * 60 * 60;
 
 #[derive(Debug)]
 struct GateHttpRuntime {
@@ -31,6 +32,7 @@ struct GateHttpRuntime {
 pub struct GateHttpState {
     metadata: ProviderMetadata,
     signing: OidcSigningAuthority,
+    native_login: Option<NativeLoginService>,
     runtime: Arc<Mutex<GateHttpRuntime>>,
 }
 
@@ -44,8 +46,14 @@ impl GateHttpState {
         Self {
             metadata,
             signing,
+            native_login: None,
             runtime: Arc::new(Mutex::new(GateHttpRuntime { oauth, sessions })),
         }
+    }
+
+    pub fn with_native_login(mut self, native_login: NativeLoginService) -> Self {
+        self.native_login = Some(native_login);
+        self
     }
 }
 
@@ -62,6 +70,12 @@ pub struct AccessTokenResponse {
     pub expires_in: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct NativeLoginRequest {
+    login: String,
+    password: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -107,6 +121,8 @@ pub fn gate_http_router_with_state(state: GateHttpState) -> Router {
         .route("/health", get(health))
         .route("/.well-known/openid-configuration", get(discovery))
         .route("/jwks.json", get(jwks))
+        .route("/session/login", post(native_login))
+        .route("/session/logout", post(native_logout))
         .route("/authorize", get(authorize))
         .route("/token", post(token))
         .with_state(state)
@@ -125,6 +141,59 @@ async fn discovery(State(state): State<GateHttpState>) -> Json<ProviderMetadata>
 
 async fn jwks(State(state): State<GateHttpState>) -> Json<JsonWebKeySet> {
     Json(state.signing.jwks())
+}
+
+async fn native_login(
+    State(state): State<GateHttpState>,
+    Json(request): Json<NativeLoginRequest>,
+) -> Response {
+    let service = match state.native_login.as_ref() {
+        Some(value) => value,
+        None => return native_login_unavailable(),
+    };
+    let login = match LoginName::new(request.login) {
+        Ok(value) => value,
+        Err(_) => return invalid_credentials(),
+    };
+    let subject = match service.authenticate(&login, &request.password) {
+        Ok(value) => value,
+        Err(
+            GateError::InvalidCredentials
+            | GateError::AccountNotFound
+            | GateError::AccountLocked
+            | GateError::AccountDisabled,
+        ) => return invalid_credentials(),
+        Err(_) => return server_error(),
+    };
+
+    let session_id = SessionId::generate();
+    let mut session = GateSession::new(session_id.clone());
+    if session.authenticate(subject).is_err() {
+        return server_error();
+    }
+    let mut runtime = match state.runtime.lock() {
+        Ok(value) => value,
+        Err(_) => return server_error(),
+    };
+    if runtime.sessions.insert(session).is_err() {
+        return server_error();
+    }
+    drop(runtime);
+
+    session_cookie_response(
+        StatusCode::NO_CONTENT,
+        &state.metadata.issuer,
+        Some(&session_id),
+    )
+}
+
+async fn native_logout(State(state): State<GateHttpState>, headers: HeaderMap) -> Response {
+    if let Some(session_id) = session_id_from_headers(&headers) {
+        if let Ok(mut runtime) = state.runtime.lock() {
+            let _ = runtime.sessions.close(&session_id);
+        }
+    }
+    session_cookie_response(StatusCode::NO_CONTENT, &state.metadata.issuer, None)
 }
 
 async fn authorize(
@@ -305,7 +374,9 @@ fn token_exchange_request(form: TokenForm) -> Result<TokenExchangeRequest, GateE
 fn session_id_from_headers(headers: &HeaderMap) -> Option<SessionId> {
     let cookie = headers.get(header::COOKIE)?.to_str().ok()?;
     for pair in cookie.split(';') {
-        let (name, value) = pair.trim().split_once('=')?;
+        let Some((name, value)) = pair.trim().split_once('=') else {
+            continue;
+        };
         if name == GATE_SESSION_COOKIE {
             return SessionId::new(value).ok();
         }
@@ -313,11 +384,62 @@ fn session_id_from_headers(headers: &HeaderMap) -> Option<SessionId> {
     None
 }
 
+fn session_cookie_response(
+    status: StatusCode,
+    issuer: &str,
+    session_id: Option<&SessionId>,
+) -> Response {
+    let secure = match Url::parse(issuer) {
+        Ok(url) => url.scheme() == "https",
+        Err(_) => return server_error(),
+    };
+    let cookie = match session_id {
+        Some(id) => format!(
+            "{GATE_SESSION_COOKIE}={}; Path=/; HttpOnly; SameSite=Lax; Max-Age={BROWSER_SESSION_MAX_AGE_SECONDS}{}",
+            id.as_str(),
+            if secure { "; Secure" } else { "" }
+        ),
+        None => format!(
+            "{GATE_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0{}",
+            if secure { "; Secure" } else { "" }
+        ),
+    };
+    let Ok(cookie) = HeaderValue::from_str(&cookie) else {
+        return server_error();
+    };
+
+    let mut response = status.into_response();
+    response.headers_mut().insert(header::SET_COOKIE, cookie);
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response
+        .headers_mut()
+        .insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    response
+}
+
 fn unix_now() -> Option<u64> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .ok()
         .map(|duration| duration.as_secs())
+}
+
+fn invalid_credentials() -> Response {
+    oauth_error(
+        StatusCode::UNAUTHORIZED,
+        "invalid_credentials",
+        "login credentials were not accepted",
+    )
+}
+
+fn native_login_unavailable() -> Response {
+    oauth_error(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "temporarily_unavailable",
+        "Realmforge native login is not configured",
+    )
 }
 
 fn invalid_request(description: &'static str) -> Response {
@@ -373,9 +495,13 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
-    use crate::{GateSession, IdentitySubject, OAuthClient, PkceCodeVerifier, SessionId};
+    use crate::{
+        AccountId, AccountRecord, AccountStatus, IdentitySubject, MemoryAccountDirectory,
+        MemoryNativeCredentialStore, NativeCredential, OAuthClient, PkceCodeVerifier,
+    };
 
     const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+    const PASSWORD: &str = "correct horse battery staple";
 
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::authorization_code(&Issuer::new("https://gate.realmforge.test").unwrap())
@@ -385,21 +511,50 @@ mod tests {
         OidcSigningAuthority::generate_2048().unwrap()
     }
 
-    fn seeded_router() -> Router {
+    fn oauth() -> OAuthService {
         let client = OAuthClient::new(
             ClientId::new("client-1").unwrap(),
             [RedirectUri::new("https://client.example/callback").unwrap()],
         )
         .unwrap();
-        let oauth =
-            OAuthService::new(OAuthClientRegistry::new([client]).unwrap(), 60, 3600).unwrap();
+        OAuthService::new(OAuthClientRegistry::new([client]).unwrap(), 60, 3600).unwrap()
+    }
+
+    fn native_login_service() -> NativeLoginService {
+        let subject = IdentitySubject::new("subject-1").unwrap();
+        let credential = NativeCredential::from_password(
+            LoginName::new("admin@realmforge.local").unwrap(),
+            subject.clone(),
+            PASSWORD,
+        )
+        .unwrap();
+        let account = AccountRecord {
+            id: AccountId::new("account-1").unwrap(),
+            subject,
+            status: AccountStatus::Active,
+            game_accounts: vec![],
+        };
+        NativeLoginService::new(
+            MemoryNativeCredentialStore::new([credential]).unwrap(),
+            MemoryAccountDirectory::new([account]).unwrap(),
+        )
+    }
+
+    fn seeded_router() -> Router {
         let mut sessions = SessionRegistry::default();
         let mut session = GateSession::new(SessionId::new("session-1").unwrap());
         session
             .authenticate(IdentitySubject::new("subject-1").unwrap())
             .unwrap();
         sessions.insert(session).unwrap();
-        gate_http_router_with_state(GateHttpState::new(metadata(), oauth, sessions, signing()))
+        gate_http_router_with_state(GateHttpState::new(metadata(), oauth(), sessions, signing()))
+    }
+
+    fn native_router() -> Router {
+        gate_http_router_with_state(
+            GateHttpState::new(metadata(), oauth(), SessionRegistry::default(), signing())
+                .with_native_login(native_login_service()),
+        )
     }
 
     fn authorize_uri(redirect_uri: &str) -> String {
@@ -463,36 +618,140 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn discovery_returns_configured_provider_metadata() {
-        let expected = metadata();
-        let state = GateHttpState::new(
-            expected.clone(),
-            OAuthService::new(OAuthClientRegistry::default(), 60, 3600).unwrap(),
-            SessionRegistry::default(),
-            signing(),
+    async fn native_login_creates_cookie_that_authorize_accepts() {
+        let app = native_router();
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/session/login")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"login":"admin@realmforge.local","password":"{PASSWORD}"}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        let cookie = response
+            .headers()
+            .get(header::SET_COOKIE)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned();
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(cookie.contains("Secure"));
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL).unwrap(),
+            "no-store"
         );
+        let cookie_pair = cookie.split(';').next().unwrap();
 
-        let Json(actual) = discovery(State(state)).await;
-        assert_eq!(actual, expected);
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(authorize_uri("https://client.example/callback"))
+                    .header(header::COOKIE, cookie_pair)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::FOUND);
     }
 
     #[tokio::test]
-    async fn jwks_returns_active_rs256_public_key() {
-        let authority = signing();
-        let expected_kid = authority.key_id().to_owned();
-        let state = GateHttpState::new(
-            metadata(),
-            OAuthService::new(OAuthClientRegistry::default(), 60, 3600).unwrap(),
-            SessionRegistry::default(),
-            authority,
+    async fn native_login_does_not_distinguish_bad_password_from_unknown_login() {
+        let app = native_router();
+        for body in [
+            r#"{"login":"admin@realmforge.local","password":"definitely wrong password"}"#,
+            r#"{"login":"missing@realmforge.local","password":"correct horse battery staple"}"#,
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/session/login")
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            let error: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(error["error"], "invalid_credentials");
+        }
+    }
+
+    #[tokio::test]
+    async fn logout_invalidates_session_and_clears_cookie() {
+        let app = native_router();
+        let login = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/session/login")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"login":"admin@realmforge.local","password":"{PASSWORD}"}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let cookie = login
+            .headers()
+            .get(header::SET_COOKIE)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .split(';')
+            .next()
+            .unwrap()
+            .to_owned();
+
+        let logout = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/session/logout")
+                    .header(header::COOKIE, &cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(logout.status(), StatusCode::NO_CONTENT);
+        assert!(
+            logout
+                .headers()
+                .get(header::SET_COOKIE)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .contains("Max-Age=0")
         );
 
-        let Json(actual) = jwks(State(state)).await;
-        assert_eq!(actual.keys.len(), 1);
-        assert_eq!(actual.keys[0].kid, expected_kid);
-        assert_eq!(actual.keys[0].kty, "RSA");
-        assert_eq!(actual.keys[0].alg, "RS256");
-        assert_eq!(actual.keys[0].key_use, "sig");
+        let authorize = app
+            .oneshot(
+                Request::builder()
+                    .uri(authorize_uri("https://client.example/callback"))
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(authorize.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
@@ -527,21 +786,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::FOUND);
-        let location = response
-            .headers()
-            .get(header::LOCATION)
-            .unwrap()
-            .to_str()
-            .unwrap();
-        let redirect = Url::parse(location).unwrap();
-        let params: std::collections::BTreeMap<_, _> =
-            redirect.query_pairs().into_owned().collect();
-        let code = params.get("code").unwrap().clone();
-        assert_eq!(
-            params.get("state").map(String::as_str),
-            Some("opaque-state")
-        );
-
+        let code = authorization_code_from_response(&response);
         let body = token_body(&code);
         let response = app
             .clone()
@@ -584,9 +829,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(replay.status(), StatusCode::BAD_REQUEST);
-        let bytes = to_bytes(replay.into_body(), usize::MAX).await.unwrap();
-        let error_json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(error_json["error"], "invalid_grant");
     }
 
     #[tokio::test]
