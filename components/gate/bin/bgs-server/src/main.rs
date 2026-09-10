@@ -7,13 +7,12 @@
 //! Milestone 18: AuthenticationService, GameUtilitiesService, AccountService
 
 mod game_utilities;
+mod realmforge_config;
 mod realmforge_realms;
 mod tcp_transport;
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::Context;
 use axum::Router;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::routing::get;
@@ -1859,19 +1858,13 @@ fn main() -> anyhow::Result<()> {
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("install rustls CryptoProvider");
-    let workers = std::env::var("TOKIO_WORKER_THREADS")
-        .ok()
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or_else(|| {
-            std::thread::available_parallelism()
-                .map(|n| n.get())
-                .unwrap_or(4)
-        });
+    let gate_config = realmforge_config::GateConfig::from_env()?;
+    let workers = gate_config.worker_threads;
     tokio::runtime::Builder::new_multi_thread()
         .worker_threads(workers)
         .enable_all()
         .build()?
-        .block_on(async {
+        .block_on(async move {
             tracing_subscriber::fmt()
                 .with_env_filter(
                     tracing_subscriber::EnvFilter::try_from_default_env()
@@ -1880,12 +1873,15 @@ fn main() -> anyhow::Result<()> {
                 .init();
 
             let meter_provider = tavern_observability::init("realmforge-gate");
-            let bind_addr: SocketAddr = std::env::var("BIND_ADDR")
-                .unwrap_or_else(|_| "127.0.0.1:8119".to_string())
-                .parse()
-                .context("invalid BIND_ADDR")?;
+            let bind_addr = gate_config.ws_bind_addr;
+            let database_url = gate_config.database_url.clone();
 
-            let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL not set")?;
+            if !gate_config.legacy_aliases_used.is_empty() {
+                warn!(
+                    aliases = ?gate_config.legacy_aliases_used,
+                    "legacy Gate configuration aliases are in use; migrate to REALMFORGE_GATE_* names"
+                );
+            }
             let pool_cfg = tavern_db::PoolConfig::from_env();
             let db = tavern_db::connect_with(&database_url, &pool_cfg).await?;
             tavern_db::run_migrations(&db).await?;
@@ -1903,10 +1899,7 @@ fn main() -> anyhow::Result<()> {
 
             let state = Arc::new(BgsState {
                 active_logins: std::sync::atomic::AtomicU64::new(0),
-                max_logins: std::env::var("MAX_BGS_LOGINS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(5000),
+                max_logins: gate_config.max_logins,
                 login_queue: std::sync::Mutex::new(std::collections::VecDeque::new()),
                 push_channels: dashmap::DashMap::new(),
                 active_accounts: dashmap::DashMap::new(),
@@ -1988,17 +1981,12 @@ fn main() -> anyhow::Result<()> {
             let listener = TcpListener::bind(bind_addr).await?;
 
             // Start raw TCP/TLS listener for WoW Classic 1.13.2 (port 1119).
-            let tcp_bind_addr: SocketAddr = std::env::var("TCP_BIND_ADDR")
-                .unwrap_or_else(|_| "127.0.0.1:1119".to_string())
-                .parse()
-                .context("invalid TCP_BIND_ADDR")?;
-            let tcp_tls = match (
-                std::env::var("BGS_TLS_CERT").ok(),
-                std::env::var("BGS_TLS_KEY").ok(),
-            ) {
-                (Some(cert), Some(key)) => Some(load_tls_server_config(&cert, &key)?),
-                _ => None,
-            };
+            let tcp_bind_addr = gate_config.tcp_bind_addr;
+            let tcp_tls = gate_config
+                .tcp_tls
+                .as_ref()
+                .map(|tls| load_tls_server_config(&tls.cert_path, &tls.key_path))
+                .transpose()?;
             let tcp_state = state.clone();
             tokio::spawn(async move {
                 if let Err(e) = tcp_transport::start_tcp_listener(
