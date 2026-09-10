@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - rebuild/realmforge-independent-gate
+      - 'rebuild/gate-*'
+    paths:
+      - 'components/gate-independent/**'
+      - 'docs/INDEPENDENT_GATE_REBUILD.md'
+      - '.github/workflows/independent-gate.yml'
   pull_request:
     paths:
       - 'components/gate-independent/**'
@@ -15,6 +20,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enforce independent source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'components/gate/|third_party/gate-upstream|tavern' \
+            components/gate-independent/src \
+            components/gate-independent/Cargo.toml; then
+            echo 'Independent Gate implementation must not reference the covered implementation or frozen upstream tree.' >&2
+            exit 1
+          fi
       - name: Install Rust 1.97
         run: |
           rustup toolchain install 1.97.0 --profile minimal
