@@ -196,9 +196,8 @@ mod tests {
         let code = store
             .issue_with_bytes(
                 [7; 32],
-                grant().with_oidc_context(OidcAuthorizationContext::new(Some(
-                    "nonce-1".to_owned(),
-                ))),
+                grant()
+                    .with_oidc_context(OidcAuthorizationContext::new(Some("nonce-1".to_owned()))),
             )
             .unwrap();
         let verifier = PkceCodeVerifier::new(VERIFIER).unwrap();
