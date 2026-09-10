@@ -73,10 +73,35 @@ A component becomes independently owned only after the derived implementation ha
 **Status:** LOCKED  
 **Decision:** Documentation/research authority comes before allowing implementation agents to fill architectural blanks with defaults.
 
+A bounded interim Gate rebuild is allowed before D0 closes when it stays behind the already-locked Gate boundary, preserves explicit unknowns, and does not silently settle Core/Forge/Client technology choices.
+
 ## D-0014 — Missing features should be explicit
 
 **Status:** LOCKED  
 **Decision:** Unknown, deferred, conflicting, and capture-required behavior must remain visibly labeled. Agents must not silently turn uncertainty into implementation policy.
+
+## D-0015 — Covered Gate working derivative
+
+**Status:** LOCKED  
+**Decision:** The pinned upstream Tavern snapshot under `third_party/gate-upstream/source/` remains an untouched evidence baseline. Realmforge's interim production modifications occur in `components/gate/`, which is explicitly a **covered AGPL-3.0-only derivative** of the pinned upstream implementation.
+
+`components/gate/` must retain required upstream license/provenance. Renaming or refactoring this tree does not make it independently owned.
+
+**Closes:** P-005.
+
+## D-0016 — Realm registry enters Gate through a projection boundary
+
+**Status:** LOCKED FOR INTERIM GATE  
+**Decision:** Tavern's hard-coded single-realm BGS behavior is not Realmforge architecture. Gate will resolve realm-list and realm-join behavior through a Realmforge-named registry/projection layer.
+
+Until Core exposes the canonical registry over an explicit service contract, Gate may load a temporary local projection from Realmforge-specific configuration. That temporary configuration is not the canonical Core Realm model and must remain replaceable.
+
+## D-0017 — Unknown client builds fail closed by default
+
+**Status:** LOCKED FOR INTERIM GATE  
+**Decision:** Gate must not silently advertise a realm to an unverified client build merely by substituting that build number into a known version tuple.
+
+Exact build profiles are required by default. An unsafe compatibility override may exist for research, but it must be opt-in and must never count as a support claim.
 
 ---
 
@@ -86,15 +111,16 @@ These remain open and must not be filled implicitly:
 
 | ID | Question | Status |
 |---|---|---|
-| P-001 | First production implementation language(s) | OPEN |
+| P-001 | First production implementation language(s) outside the inherited Gate derivative | OPEN |
 | P-002 | Desktop launcher framework | OPEN |
 | P-003 | Core API framework | OPEN |
 | P-004 | First emulator core/adaptor target | OPEN |
-| P-005 | Interim third-party Gate import method | OPEN |
+| P-005 | Interim third-party Gate import method | **CLOSED — D-0015** |
 | P-006 | Whether desktop-app compatibility is launch-critical | OPEN |
 | P-007 | Homelab-only versus public-hosting security profile at M1 | OPEN |
 | P-008 | Realmforge-wide software license | OPEN |
 | P-009 | Primary database for Core | OPEN |
-| P-010 | Source repository layout once production code begins | OPEN |
+| P-010 | Source repository layout once production code expands beyond Gate | OPEN |
+| P-011 | Core ↔ Gate service-contract transport and versioning | OPEN |
 
 When a pending decision closes, add a numbered locked decision above and update the handoff.
