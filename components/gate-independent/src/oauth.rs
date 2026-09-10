@@ -276,19 +276,15 @@ mod tests {
         let verifier = PkceCodeVerifier::new(RFC_VERIFIER).unwrap();
         let client = ClientId::new("client-1").unwrap();
         let redirect = RedirectUri::new("https://client.example/callback").unwrap();
-        let mut grant = grant().with_oidc_context(OidcAuthorizationContext::new(Some(
-            "nonce-1".to_owned(),
-        )));
+        let mut grant =
+            grant().with_oidc_context(OidcAuthorizationContext::new(Some("nonce-1".to_owned())));
 
         let redeemed = grant
             .redeem_full(150, &client, &redirect, &verifier)
             .unwrap();
         assert_eq!(redeemed.subject.as_str(), "subject-1");
         assert_eq!(redeemed.client_id.as_str(), "client-1");
-        assert_eq!(
-            redeemed.oidc.unwrap().nonce.as_deref(),
-            Some("nonce-1")
-        );
+        assert_eq!(redeemed.oidc.unwrap().nonce.as_deref(), Some("nonce-1"));
     }
 
     #[test]
