@@ -21,6 +21,9 @@ pub enum GateError {
     AccountLocked,
     AccountDisabled,
     InvalidSessionId,
+    DuplicateSessionId,
+    SessionNotFound,
+    SessionAlreadyAuthenticated,
     SessionClosed,
     InvalidOAuthClientId,
     InvalidRedirectUri,
@@ -62,6 +65,11 @@ impl fmt::Display for GateError {
             Self::AccountLocked => write!(f, "account is locked"),
             Self::AccountDisabled => write!(f, "account is disabled"),
             Self::InvalidSessionId => write!(f, "session id must not be empty"),
+            Self::DuplicateSessionId => write!(f, "session id already exists"),
+            Self::SessionNotFound => write!(f, "session not found"),
+            Self::SessionAlreadyAuthenticated => {
+                write!(f, "session is already authenticated as another identity")
+            }
             Self::SessionClosed => write!(f, "session is already closed"),
             Self::InvalidOAuthClientId => write!(f, "OAuth client id must not be empty"),
             Self::InvalidRedirectUri => write!(f, "redirect URI must not be empty"),
