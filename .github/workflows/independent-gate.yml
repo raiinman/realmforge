@@ -103,3 +103,59 @@ jobs:
             http://127.0.0.1:18080/token)
           test "$token_status" = "400"
           grep -F '"error":"invalid_grant"' /tmp/token.json
+
+      - name: Smoke protocol-neutral capture observer
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/realmforge-observer-smoke
+          mkdir -p /tmp/realmforge-observer-smoke
+          cp components/gate-independent/tests/fixtures/observer-seed.json \
+            /tmp/realmforge-observer-smoke/manifest.json
+
+          "$CARGO_TARGET_DIR/debug/realmforge-gate-observer" \
+            --manifest /tmp/realmforge-observer-smoke/manifest.json \
+            --bind 127.0.0.1:19090 \
+            --timeout-seconds 5 \
+            > /tmp/observer.out 2> /tmp/observer.err &
+          observer_pid=$!
+          cleanup_observer() {
+            kill "$observer_pid" 2>/dev/null || true
+            wait "$observer_pid" 2>/dev/null || true
+          }
+          trap cleanup_observer EXIT
+
+          python3 - <<'PY'
+          import socket
+          import time
+
+          for _ in range(50):
+              try:
+                  with socket.create_connection(("127.0.0.1", 19090), timeout=1) as sock:
+                      sock.sendall(b"realmforge-synthetic-probe")
+                      break
+              except OSError:
+                  time.sleep(0.1)
+          else:
+              raise SystemExit("observer did not accept connections")
+          PY
+
+          wait "$observer_pid"
+          trap - EXIT
+
+          test -s /tmp/realmforge-observer-smoke/artifacts/observer-tcp-001.bin
+          grep -F 'capture_id=synthetic-ci-observer-001' /tmp/observer.out
+          grep -F 'implementation_ready=false' /tmp/observer.out
+          grep -F '"operation": "accept_connection"' /tmp/realmforge-observer-smoke/manifest.json
+          grep -F '"operation": "receive_bytes"' /tmp/realmforge-observer-smoke/manifest.json
+          grep -F '"contains_secrets": true' /tmp/realmforge-observer-smoke/manifest.json
+          grep -F '"redaction_status": "not_reviewed"' /tmp/realmforge-observer-smoke/manifest.json
+
+          "$CARGO_TARGET_DIR/debug/realmforge-gate-fixture-check" \
+            /tmp/realmforge-observer-smoke/manifest.json
+
+          if "$CARGO_TARGET_DIR/debug/realmforge-gate-fixture-check" \
+            /tmp/realmforge-observer-smoke/manifest.json --implementation-ready; then
+            echo 'raw observer fixture unexpectedly became implementation-ready before review' >&2
+            exit 1
+          fi
