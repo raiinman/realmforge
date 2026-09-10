@@ -24,11 +24,11 @@
 - untouched build/test/database baseline passed,
 - working derivative created separately under `components/gate/`.
 
-### RF-G1 — Realmforge realm registry boundary — ACTIVE
+### RF-G1 — Realmforge realm registry boundary — COMPLETE
 
 Goal: remove the single hard-coded Tavern realm from BGS realm-list/join behavior.
 
-Deliverables:
+Delivered:
 
 - Realmforge Gate realm registry module,
 - configurable display name/address/port,
@@ -37,11 +37,14 @@ Deliverables:
 - unknown builds fail closed by default,
 - realm-list projection generated from registry,
 - realm-join target resolved from registry,
-- Gate metrics/service identity renamed to Realmforge,
+- Gate metrics/service identity began moving to Realmforge,
 - regression tests preserving inherited wire behavior,
-- pinned upstream baseline remains byte-for-byte untouched.
+- full locked workspace tests pass,
+- pinned upstream baseline remains untouched.
 
-### RF-G2 — Realmforge Gate identity cleanup
+Verification: GitHub Actions run `34437936703` completed successfully.
+
+### RF-G2 — Realmforge Gate identity cleanup — NEXT
 
 Goal: remove product-visible Tavern identity while preserving required legal provenance.
 
@@ -159,11 +162,14 @@ Everything before that should serve this path or prove a boundary needed by it.
 
 ## 5. Current attack list
 
-After RF-G1 passes CI, the next highest-value work is:
+RF-G1 is green. The next highest-value work is:
 
 1. repair/normalize the baseline evidence report metadata,
 2. finish the Gate config surface inventory against the new registry,
 3. investigate the upstream-referenced 1.13.2.31650 interoperability research corpus and its provenance,
-4. select the first emulator adapter candidate,
-5. specify the world-auth handoff contract,
-6. build the first real-client capture fixture.
+4. compare first emulator adapter candidates,
+5. close the first adapter decision deliberately,
+6. specify the world-auth handoff contract,
+7. build the first real-client capture fixture.
+
+RF-G2 branding/identity cleanup can proceed in parallel, but it must not delay world-auth progress.
