@@ -118,11 +118,9 @@ impl OAuthService {
             &request.redirect_uri,
             &request.verifier,
         )?;
-        let access_token = self.tokens.issue(
-            subject,
-            now_unix,
-            self.access_token_lifetime_seconds,
-        )?;
+        let access_token =
+            self.tokens
+                .issue(subject, now_unix, self.access_token_lifetime_seconds)?;
 
         Ok(TokenResponse {
             access_token,
