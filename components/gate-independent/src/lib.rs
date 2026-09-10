@@ -196,11 +196,8 @@ mod tests {
 
     #[test]
     fn exact_build_match_lists_only_compatible_realms() {
-        let catalog = RealmCatalog::new([
-            realm("alpha", &[40618]),
-            realm("beta", &[31650, 40618]),
-        ])
-        .unwrap();
+        let catalog =
+            RealmCatalog::new([realm("alpha", &[40618]), realm("beta", &[31650, 40618])]).unwrap();
 
         let ids: Vec<_> = catalog
             .list_for_build(ClientBuild(31650))
