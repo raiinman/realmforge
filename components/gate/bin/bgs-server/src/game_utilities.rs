@@ -2,51 +2,25 @@
 
 //! `GameUtilities::ProcessClientRequest` handler for the realm-list flow.
 //!
-//! The WoW Classic 1.13.2 / 1.14.0 clients send `Command_*_v1` attributes
-//! inside `ClientRequest` messages to negotiate realm-list access (the
-//! command set is identical in both builds; 1.14.0/40618 doc:
-//! gameutilities-realmlist-flow.md). This module implements the full
-//! pre-realm-join handoff:
-//!
-//! 1. `Command_RealmListTicketRequest_v1` — issues an opaque realm-list
-//!    ticket. The client sends `Param_Identity` + `Param_ClientInfo`.
-//! 2. `Command_RealmListRequest_v1` — returns the realm catalog as
-//!    zlib-compressed `JSONRealmListUpdates:` JSON + character counts.
-//! 3. `Command_LastCharPlayedRequest_v1` / `Command_CharacterListRequest_v1`
-//!    — empty stubs (no characters yet).
-//! 4. `Command_RealmJoinRequest_v1` — returns the world-server connection
-//!    parameters: `Param_ServerAddresses` (zlib JSON), `Param_JoinSecret`
-//!    (32 bytes), `Param_RealmJoinTicket`, `Param_BnetSessionKey`. Tavern
-//!    stops at this handoff; the realm server is an external integration.
-//!
-//! The carrier protos (`ClientRequest`, `ClientResponse`, `Attribute`,
-//! `Variant`) are identical across BGS v1 and v2, so this handler is
-//! version-agnostic. Wire shapes cross-referenced against
-//! protobuf-decompiler/output/1.13.2.31650/bgs/low/pb/client/
-//! (game_utilities_service.proto, attribute_types.proto).
+//! Realmforge keeps the retired-client wire contract in Gate, but realm
+//! identity, display names, endpoints, and explicit build compatibility are
+//! now supplied by `realmforge_realms::RealmRegistry` rather than hard-coded
+//! Tavern constants.
 
 use std::sync::Arc;
 
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use prost::Message as _;
+use prost::bytes::Bytes;
 use rand::RngCore;
 use tavern_bgs::frame::serialize_frame;
 use tavern_bgs::{Attribute, ClientRequest, ClientResponse, Header, Variant};
 use tracing::{info, warn};
 
-use prost::bytes::Bytes;
-
-/// The single realm tavern advertises. Encoded as
-/// `(region << 24) | (site << 16) | (realm << 8) | flags` — region 1
-/// (US), site 1, realm 1, no flags. Must match `wowRealmAddress` in the
-/// realm-list JSON.
-const REALM_ADDRESS: u32 = 0x0101_0100;
+use super::realmforge_realms::{ClientVersion, RealmDefinition, RealmRegistry};
 
 /// Build a response to `GameUtilities::ProcessClientRequest`.
-///
-/// Parses the `ClientRequest` attributes, routes to the matching command
-/// handler, and returns zero or more response frames.
 pub async fn handle_process_client_request(
     state: &Arc<super::BgsState>,
     session: &mut super::BgsSession,
@@ -56,7 +30,6 @@ pub async fn handle_process_client_request(
     let sid = &session.id;
     let request = ClientRequest::decode(body)?;
 
-    // Find the first `Command_*_v1` attribute.
     let command_attr = request
         .attribute
         .iter()
@@ -79,14 +52,19 @@ pub async fn handle_process_client_request(
         "Command_RealmListTicketRequest_v1" => {
             handle_realm_list_ticket_request(session, header, &request)
         }
-        "Command_RealmListRequest_v1" => handle_realm_list_request(session, header, &request),
+        "Command_RealmListRequest_v1" => {
+            handle_realm_list_request(state, session, header, &request)
+        }
         "Command_LastCharPlayedRequest_v1" => {
             info!(session_id = %sid, "LastCharPlayed — returning empty");
             Ok(vec![build_empty_response(header)?])
         }
-        "Command_RealmJoinRequest_v1" => {
-            handle_realm_join_request(&state.realm_ip, state.realm_port, session, header, &request)
-        }
+        "Command_RealmJoinRequest_v1" => handle_realm_join_request(
+            &state.realm_registry,
+            session,
+            header,
+            &request,
+        ),
         "Command_CharacterListRequest_v1" => {
             info!(session_id = %sid, "CharacterList — returning empty");
             Ok(vec![build_empty_response(header)?])
@@ -94,7 +72,8 @@ pub async fn handle_process_client_request(
         _ => {
             info!(
                 session_id = %sid,
-                command_name, "unknown command — returning empty"
+                command_name,
+                "unknown command — returning empty"
             );
             Ok(vec![build_empty_response(header)?])
         }
@@ -103,10 +82,9 @@ pub async fn handle_process_client_request(
 
 /// Handle `Command_RealmListTicketRequest_v1`.
 ///
-/// Parses `Param_Identity` (JSON-encoded identity blob) and `Param_ClientInfo`
-/// (JSON-encoded client info with `secret`) and returns `Param_RealmListTicket`
-/// as an opaque string blob. TrinityCore uses the literal string
-/// "AuthRealmListTicket"; the 1.13.2 client accepts it.
+/// This remains inherited compatibility behavior until the ticket contract is
+/// independently captured. The literal is therefore intentionally visible as
+/// a known replacement target rather than disguised as Realmforge policy.
 fn handle_realm_list_ticket_request(
     session: &super::BgsSession,
     header: &Header,
@@ -139,52 +117,41 @@ fn handle_realm_list_ticket_request(
     build_response(header, &response)
 }
 
-/// Handle `Command_RealmListRequest_v1`.
-///
-/// Returns `Param_RealmList` as zlib-compressed JSON containing the realm
-/// catalog, plus `Param_CharacterCountList` (empty counts).
-///
-/// The JSON uses the canonical `JSON.RealmList` proto field names
-/// (`wowRealmAddress`, `cfgTimezonesID`, `version.versionBuild`, `name`, …)
-/// — the client deserializes with protoc-gen-json field-name matching
-/// (realmlist-flow.md; reference RealmList.proto). The realm version is
-/// served per client build: 1.14.0/40618 clients get the 1.14.0 version
-/// tuple, everything else the 1.13.2 one, so the realm never shows a
-/// version mismatch.
+/// Handle `Command_RealmListRequest_v1` using Realmforge's Gate registry.
 fn handle_realm_list_request(
+    state: &Arc<super::BgsState>,
     session: &super::BgsSession,
     header: &Header,
     _request: &ClientRequest,
 ) -> anyhow::Result<Vec<Bytes>> {
-    info!(session_id = %session.id, "RealmListRequest");
+    let advertised = state.realm_registry.advertised_realms(session.build);
+    let effective_build = RealmRegistry::effective_build(session.build);
 
-    let (major, minor, revision, build) = realm_version(session.build);
+    if advertised.is_empty() {
+        warn!(
+            session_id = %session.id,
+            build = effective_build,
+            "no Realmforge realm is explicitly compatible with this client build"
+        );
+    } else {
+        info!(
+            session_id = %session.id,
+            build = effective_build,
+            realm_count = advertised.len(),
+            "RealmListRequest"
+        );
+    }
 
-    let realm_list_json = serde_json::json!({
-        "updates": [{
-            "update": {
-                "wowRealmAddress": REALM_ADDRESS,
-                "cfgTimezonesID": 1,
-                "populationState": 1,
-                "cfgCategoriesID": 1,
-                "version": {
-                    "versionMajor": major,
-                    "versionMinor": minor,
-                    "versionRevision": revision,
-                    "versionBuild": build,
-                },
-                "cfgRealmsID": 1,
-                "flags": 0,
-                "name": "Tavern Realm",
-                "cfgConfigsID": 1,
-                "cfgLanguagesID": 1,
-            },
-            "deleting": false,
-        }]
-    });
+    let updates: Vec<serde_json::Value> = advertised
+        .iter()
+        .map(|(realm, version)| realm_update_json(realm, *version))
+        .collect();
+
+    let realm_list_json = serde_json::json!({ "updates": updates });
     let realm_blob = zlib_blob(&format!("JSONRealmListUpdates:{realm_list_json}"))?;
 
-    // Character counts per realm — empty for now (no characters yet).
+    // Character counts remain an explicit compatibility gap until Bridge can
+    // supply them from the selected emulator adapter.
     let count_json = serde_json::json!({ "counts": [] });
     let count_blob = zlib_blob(&format!("JSONRealmCharacterCountList:{count_json}"))?;
 
@@ -210,30 +177,33 @@ fn handle_realm_list_request(
     build_response(header, &response)
 }
 
-/// Handle `Command_RealmJoinRequest_v1`.
-///
-/// The client sends `Param_RealmAddress` (uint) naming the realm it wants
-/// to join. The server replies with the world-server connection parameters
-/// (realmlist-flow.md §RealmJoin + the 1.13.2 realm-join walk-through):
-///
-/// - `Param_ServerAddresses` — zlib-compressed
-///   `JSONRealmListServerIPAddresses:` JSON (proto
-///   `JSON.RealmList.RealmListServerIPAddresses`): families → family +
-///   addresses[] of {ip, port}, pointing at the configured realm listener.
-/// - `Param_JoinSecret` — 32 random bytes; the `serverSecret` half of the
-///   1.13.2 world-auth digest key material
-///   (`SHA256(clientSecret ‖ serverSecret ‖ osAuthSeed)`).
-/// - `Param_RealmJoinTicket` — opaque account handle the client echoes in
-///   `CMSG_AUTH_SESSION.RealmJoinTicket`; the realm server resolves it.
-/// - `Param_BnetSessionKey` — the BGS session key from VerifyWebCredentials
-///   (1.14.0 world auth TLS material).
-///
-/// The client reads named params, so unknown extras are ignored; the set
-/// above covers both builds (1.14.0 never uses `JoinSecret`, per the
-/// 1.14.0 param table).
+fn realm_update_json(realm: &RealmDefinition, version: ClientVersion) -> serde_json::Value {
+    serde_json::json!({
+        "update": {
+            "wowRealmAddress": realm.wow_realm_address(),
+            "cfgTimezonesID": realm.timezone_id,
+            "populationState": realm.population_state,
+            "cfgCategoriesID": realm.category_id,
+            "version": {
+                "versionMajor": version.major,
+                "versionMinor": version.minor,
+                "versionRevision": version.revision,
+                "versionBuild": version.build,
+            },
+            "cfgRealmsID": u32::from(realm.realm_index),
+            "flags": realm.realm_flags,
+            "name": realm.display_name,
+            "cfgConfigsID": realm.config_id,
+            "cfgLanguagesID": realm.language_id,
+        },
+        "deleting": false,
+    })
+}
+
+/// Handle `Command_RealmJoinRequest_v1` by resolving the selected wire address
+/// back to a Realmforge Gate realm definition.
 fn handle_realm_join_request(
-    realm_ip: &str,
-    realm_port: u16,
+    registry: &RealmRegistry,
     session: &super::BgsSession,
     header: &Header,
     request: &ClientRequest,
@@ -252,30 +222,35 @@ fn handle_realm_join_request(
         return Ok(vec![build_error_response(header)?]);
     };
 
-    if realm_address != u64::from(REALM_ADDRESS) {
+    let Some(realm) = registry.find_join_target(realm_address, session.build) else {
         warn!(
             session_id = %session.id,
-            realm_address, "RealmJoinRequest for unknown realm"
+            realm_address,
+            build = RealmRegistry::effective_build(session.build),
+            "RealmJoinRequest for unknown or incompatible realm"
         );
         return Ok(vec![build_error_response(header)?]);
-    }
+    };
 
-    let family = if realm_ip.contains(':') { 2 } else { 1 };
+    let family = if realm.public_address.contains(':') { 2 } else { 1 };
     let addresses_json = serde_json::json!({
         "families": [{
             "family": family,
-            "addresses": [{ "ip": realm_ip, "port": realm_port }]
+            "addresses": [{
+                "ip": realm.public_address,
+                "port": realm.game_port
+            }]
         }]
     });
     let addresses_blob = zlib_blob(&format!("JSONRealmListServerIPAddresses:{addresses_json}"))?;
 
-    // JoinSecret: 32 random bytes (serverSecret). Random per join; the
-    // realm server shares it with the client's digest computation.
+    // Inherited compatibility behavior: 32 random bytes as the join secret.
+    // The realm-side consumer contract remains a P0 capture/integration task.
     let mut join_secret = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut join_secret);
 
-    // RealmJoinTicket: the account id as an opaque string. The realm
-    // server looks the account up by this handle.
+    // Inherited compatibility behavior: account id used as opaque join ticket.
+    // Keep this visibly temporary until Bridge/world-auth owns the real handoff.
     let ticket = session
         ._account_id
         .map(|id| id.to_string())
@@ -315,7 +290,13 @@ fn handle_realm_join_request(
         });
     }
 
-    info!(session_id = %session.id, realm_address, "RealmJoinRequest answered");
+    info!(
+        session_id = %session.id,
+        realm_id = %realm.id,
+        realm_address,
+        "RealmJoinRequest answered"
+    );
+
     build_response(
         header,
         &ClientResponse {
@@ -324,23 +305,7 @@ fn handle_realm_join_request(
     )
 }
 
-/// Version tuple for the advertised realm, per client build.
-///
-/// 1.14.0/40618 is a Shadowlands rebase (major/minor/revision/build
-/// 1/14/0/40618); every other build gets the 1.13.2 tuple with the
-/// client's own build number so the realm never shows a version mismatch.
-fn realm_version(build: Option<i32>) -> (u32, u32, u32, u32) {
-    match build {
-        Some(40618) => (1, 14, 0, 40618),
-        Some(b) => (1, 13, 2, b as u32),
-        None => (1, 13, 2, 31650),
-    }
-}
-
-/// Compress a `"<TypeName>:<json>"` payload into the realm-list blob
-/// format: 4-byte LE uncompressed length + deflate stream, matching the
-/// TC Classic reference (`uint32(json.length() + 1)` prefix, NUL included
-/// in the compressed payload).
+/// Compress a `"<TypeName>:<json>"` payload into the realm-list blob format.
 fn zlib_blob(json_payload: &str) -> anyhow::Result<Vec<u8>> {
     let mut uncompressed = json_payload.as_bytes().to_vec();
     uncompressed.push(0);
@@ -353,7 +318,6 @@ fn zlib_blob(json_payload: &str) -> anyhow::Result<Vec<u8>> {
     Ok(blob)
 }
 
-/// Build a response frame for a `ClientResponse`.
 fn build_response(header: &Header, response: &ClientResponse) -> anyhow::Result<Vec<Bytes>> {
     let resp_header = Header {
         service_id: header.service_id,
@@ -368,7 +332,6 @@ fn build_response(header: &Header, response: &ClientResponse) -> anyhow::Result<
     Ok(vec![frame])
 }
 
-/// Build an empty success response frame.
 fn build_empty_response(header: &Header) -> anyhow::Result<Bytes> {
     let response = ClientResponse::default();
     let resp_header = Header {
@@ -383,7 +346,6 @@ fn build_empty_response(header: &Header) -> anyhow::Result<Bytes> {
     serialize_frame(&resp_header, Some(&response.encode_to_vec())).map_err(Into::into)
 }
 
-/// Build an error response frame (non-zero status, empty body).
 fn build_error_response(header: &Header) -> anyhow::Result<Bytes> {
     let resp_header = Header {
         service_id: header.service_id,
@@ -407,54 +369,26 @@ mod tests {
         let mut decoder = ZlibDecoder::new(&blob[4..]);
         let mut decompressed = Vec::new();
         std::io::Read::read_to_end(&mut decoder, &mut decompressed).unwrap();
-        assert_eq!(
-            decompressed.len(),
-            len,
-            "prefix must match decompressed size"
-        );
-        // Trailing NUL included per TC reference.
+        assert_eq!(decompressed.len(), len);
         assert_eq!(decompressed.pop(), Some(0));
         String::from_utf8(decompressed).unwrap()
     }
 
     #[test]
-    fn realm_list_json_is_valid() {
-        let json = serde_json::json!({
-            "updates": [{
-                "update": {
-                    "wowRealmAddress": REALM_ADDRESS,
-                    "cfgTimezonesID": 1,
-                    "populationState": 1,
-                    "cfgCategoriesID": 1,
-                    "version": {
-                        "versionMajor": 1, "versionMinor": 13,
-                        "versionRevision": 2, "versionBuild": 31650
-                    },
-                    "cfgRealmsID": 1,
-                    "flags": 0,
-                    "name": "Tavern Realm",
-                    "cfgConfigsID": 1,
-                    "cfgLanguagesID": 1,
-                },
-                "deleting": false,
-            }]
-        });
-        let s = serde_json::to_string(&json).unwrap();
-        assert!(s.contains("Tavern Realm"));
-        assert!(s.contains("31650"));
-        // Canonical proto field names (protoc-gen-json compatible).
-        assert!(s.contains("wowRealmAddress"));
-        assert!(s.contains("versionBuild"));
-        assert!(!s.contains("realmName"));
-        assert!(!s.contains("enUS"));
+    fn realmforge_projection_uses_registry_identity() {
+        let registry = RealmRegistry::default();
+        let (realm, version) = registry.advertised_realms(Some(31_650))[0];
+        let json = realm_update_json(realm, version);
+
+        assert_eq!(json["update"]["name"], "RealmForge");
+        assert_eq!(json["update"]["wowRealmAddress"], 0x0101_0100u32);
+        assert_eq!(json["update"]["version"]["versionBuild"], 31_650);
     }
 
     #[test]
-    fn realm_version_maps_builds() {
-        assert_eq!(realm_version(Some(31650)), (1, 13, 2, 31650));
-        assert_eq!(realm_version(Some(40618)), (1, 14, 0, 40618));
-        assert_eq!(realm_version(Some(12345)), (1, 13, 2, 12345));
-        assert_eq!(realm_version(None), (1, 13, 2, 31650));
+    fn unknown_build_is_not_silently_advertised() {
+        let registry = RealmRegistry::default();
+        assert!(registry.advertised_realms(Some(99_999)).is_empty());
     }
 
     #[test]
@@ -468,15 +402,17 @@ mod tests {
 
     #[test]
     fn realm_join_response_carries_all_params() {
+        let registry = RealmRegistry::default();
         let mut session = super::super::BgsSession::new("test-session".to_string());
         session._account_id = Some(42);
         session.session_key = Some([7u8; 64]);
+        session.build = Some(31_650);
 
         let request = ClientRequest {
             attribute: vec![Attribute {
                 name: "Param_RealmAddress".to_string(),
                 value: Variant {
-                    uint_value: Some(u64::from(REALM_ADDRESS)),
+                    uint_value: Some(0x0101_0100),
                     ..Default::default()
                 },
             }],
@@ -490,11 +426,9 @@ mod tests {
             ..Default::default()
         };
 
-        let frames =
-            handle_realm_join_request("127.0.0.1", 8085, &session, &header, &request).unwrap();
+        let frames = handle_realm_join_request(&registry, &session, &header, &request).unwrap();
         assert_eq!(frames.len(), 1);
 
-        // Re-parse the frame body and inspect the attributes.
         let frame =
             tavern_bgs::frame::parse_frame(&mut prost::bytes::BytesMut::from(frames[0].as_ref()))
                 .expect("frame parses")
@@ -509,7 +443,6 @@ mod tests {
             );
         }
 
-        // ServerAddresses decompresses to a valid JSONRealmListServerIPAddresses doc.
         let addresses = decompress_blob(by_name["Param_ServerAddresses"]);
         assert!(addresses.starts_with("JSONRealmListServerIPAddresses:"));
         let json_text = addresses.trim_start_matches("JSONRealmListServerIPAddresses:");
@@ -517,20 +450,16 @@ mod tests {
         assert_eq!(json["families"][0]["family"], 1);
         assert_eq!(json["families"][0]["addresses"][0]["ip"], "127.0.0.1");
         assert_eq!(json["families"][0]["addresses"][0]["port"], 8085);
-
-        // JoinSecret is exactly 32 bytes.
         assert_eq!(by_name["Param_JoinSecret"].len(), 32);
-
-        // RealmJoinTicket echoes the account id.
         assert_eq!(by_name["Param_RealmJoinTicket"], b"42");
-
-        // BnetSessionKey is the session key.
         assert_eq!(by_name["Param_BnetSessionKey"], &[7u8; 64]);
     }
 
     #[test]
     fn realm_join_rejects_unknown_realm() {
-        let session = super::super::BgsSession::new("test-session".to_string());
+        let registry = RealmRegistry::default();
+        let mut session = super::super::BgsSession::new("test-session".to_string());
+        session.build = Some(31_650);
         let request = ClientRequest {
             attribute: vec![Attribute {
                 name: "Param_RealmAddress".to_string(),
@@ -548,8 +477,7 @@ mod tests {
             service_hash: Some(tavern_bgs::service_hash::GAME_UTILITIES_V1),
             ..Default::default()
         };
-        let frames =
-            handle_realm_join_request("127.0.0.1", 8085, &session, &header, &request).unwrap();
+        let frames = handle_realm_join_request(&registry, &session, &header, &request).unwrap();
         let frame =
             tavern_bgs::frame::parse_frame(&mut prost::bytes::BytesMut::from(frames[0].as_ref()))
                 .expect("frame parses")
