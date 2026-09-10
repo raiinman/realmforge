@@ -53,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           rustup toolchain install 1.97.0 --profile minimal
-          rustup override set 1.97.0 "$SOURCE_DIR"
+          rustup default 1.97.0
           rustc --version
           cargo --version
 
@@ -135,8 +135,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          rust_version="$(rustc +1.97.0 --version)"
-          cargo_version="$(cargo +1.97.0 --version)"
+          rust_version="$(rustc --version)"
+          cargo_version="$(cargo --version)"
           postgres_version="$(psql --version)"
           kernel="$(uname -a)"
           tracked_files="$(cut -d= -f2 < <(grep '^tracked_files=' third_party/gate-upstream/SNAPSHOT_STATS))"
