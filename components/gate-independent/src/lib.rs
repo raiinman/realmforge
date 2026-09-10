@@ -19,5 +19,5 @@ pub use oauth::{
     AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri,
 };
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
-pub use session::{GateSession, SessionId, SessionState};
+pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
 pub use world_auth::{WorldAuthBridge, WorldAuthGrant, WorldAuthRequest};
