@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Input fuzzer for Tavern account server.
+"""Input fuzzer for Realmforge account server.
 
 Hits every endpoint with malformed, oversized, and edge-case inputs to
 surface panics and 500 errors. Run against a local dev server:
@@ -298,7 +298,7 @@ def fuzz_http_raw(args) -> list[str]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Tavern account server fuzzer")
+    parser = argparse.ArgumentParser(description="Realmforge account server fuzzer")
     parser.add_argument(
         "--server",
         default="http://127.0.0.1:8081",

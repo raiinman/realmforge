@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Control the local OpenTelemetry Collector for Tavern development.
+# Control the local OpenTelemetry Collector for Realmforge development.
 #
 #   ./dev/otel.sh up       start the collector (OTLP/HTTP in, Prometheus out)
 #   ./dev/otel.sh down     stop and remove the collector container
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 IMAGE="docker.io/otel/opentelemetry-collector-contrib:0.114.0"
-NAME="tavern-otel"
+NAME="realmforge-otel"
 CONFIG_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 cmd_up() {

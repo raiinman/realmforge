@@ -17,7 +17,7 @@ The project currently has two parallel goals:
 1. Use an existing compatible authentication/BGS implementation as an interim subsystem where useful.
 2. Build a source-independent reconstruction authority so every inherited component can eventually be replaced by Realmforge-owned code without needing to reopen the upstream implementation.
 
-See [`docs/reconstruction/TAVERN_EXIT_LEDGER.md`](docs/reconstruction/TAVERN_EXIT_LEDGER.md) for the current reconstruction authority.
+See [`docs/reconstruction/UPSTREAM_EXIT_LEDGER.md`](docs/reconstruction/UPSTREAM_EXIT_LEDGER.md) for the current reconstruction authority.
 
 ## Product shape
 
@@ -79,7 +79,7 @@ Read these before changing architecture:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - [`docs/DECISIONS.md`](docs/DECISIONS.md)
-- [`docs/reconstruction/TAVERN_EXIT_LEDGER.md`](docs/reconstruction/TAVERN_EXIT_LEDGER.md)
+- [`docs/reconstruction/UPSTREAM_EXIT_LEDGER.md`](docs/reconstruction/UPSTREAM_EXIT_LEDGER.md)
 - [`docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`](docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md)
 - [`docs/LEGAL_AND_SOURCE_BOUNDARY.md`](docs/LEGAL_AND_SOURCE_BOUNDARY.md)
 - [`docs/NEXT_CHAT_HANDOFF.md`](docs/NEXT_CHAT_HANDOFF.md)

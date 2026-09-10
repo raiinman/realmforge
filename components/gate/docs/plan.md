@@ -6,7 +6,7 @@
 > are extracted; responsive and loading/error/empty states remain.
 > See [`docs/spa-design.md`](spa-design.md) for the SPA design specification.
 
-This plan bootstraps Tavern in atomic, verifiable units. Each client line
+This plan bootstraps Realmforge in atomic, verifiable units. Each client line
 uses its own login transport and proof and lands on one shared
 account/ticket backend (see `docs/architecture.md`):
 
@@ -98,9 +98,9 @@ locales fall back to `enUS`.
 - Root `Cargo.toml` as `[workspace]` with shared `[workspace.dependencies]`
   (`axum`, `sqlx`, `tokio`, `thiserror`, `anyhow`, `askama`, `serde`,
   `tracing`, `jsonwebtoken`, `rand`).
-- `crates/tavern-core`, `crates/tavern-db`, `crates/tavern-oauth`,
-  `crates/tavern-account` as library crates.
-- `bin/oauth-server`, `bin/account-server` as binary crates.
+- `crates/realmforge-gate-core`, `crates/realmforge-gate-db`, `crates/realmforge-gate-oauth`,
+  `crates/realmforge-gate-account` as library crates.
+- `bin/realmforge-gate-oauth-server`, `bin/realmforge-gate-account-server` as binary crates.
 - SPDX header on every `.rs` file.
 
 **Verify:**
@@ -109,7 +109,7 @@ locales fall back to `enUS`.
 - [x] `cargo clippy --workspace -- -D warnings` clean.
 - [x] `cargo nextest run` green (one trivial test per crate).
 
-### Milestone 1 — `tavern-core`: config, errors, domain types
+### Milestone 1 — `realmforge-gate-core`: config, errors, domain types
 
 **Goal:** the pure foundation everything imports.
 
@@ -129,7 +129,7 @@ locales fall back to `enUS`.
 - [x] Error conversion tests pass.
 - [x] No I/O in the crate (no `tokio`, no `sqlx` dependency here).
 
-### Milestone 2 — Postgres dev container and `tavern-db` pool
+### Milestone 2 — Postgres dev container and `realmforge-gate-db` pool
 
 **Goal:** a reproducible Postgres 16 database and a working pool plus migration
 runner.
@@ -139,7 +139,7 @@ runner.
 **Build:**
 
 - `dev/Containerfile` based on `postgres:16`, plus a `podman` run wrapper.
-- `tavern-db`: `PgPool` builder, `sqlx::migrate!` runner, admin auto-migrate
+- `realmforge-gate-db`: `PgPool` builder, `sqlx::migrate!` runner, admin auto-migrate
   flag.
 - Migration `0001_init`: `accounts` and `credentials` tables.
 
@@ -149,7 +149,7 @@ runner.
 - [x] Migration applies; a row can be inserted and read via `psql`.
 - [x] `cargo sqlx prepare` generates the query cache.
 
-### Milestone 3 — `tavern-db`: repositories
+### Milestone 3 — `realmforge-gate-db`: repositories
 
 **Goal:** typed data access for accounts and credentials.
 
@@ -166,7 +166,7 @@ runner.
 - [x] Integration tests against the container: CRUD on accounts and credentials.
 - [x] `sqlx::query!` calls compile against the live schema.
 
-### Milestone 4 — `tavern-core`: SRP6a
+### Milestone 4 — `realmforge-gate-core`: SRP6a
 
 **Goal:** the credential math, pure and unit-tested.
 
@@ -185,14 +185,14 @@ runner.
 - [x] Property test: `register(pw)` then `login(pw)` succeeds; wrong password
       fails.
 
-### Milestone 5 — `tavern-core`: JWT and JWKS signing
+### Milestone 5 — `realmforge-gate-core`: JWT and JWKS signing
 
 **Goal:** RS256 token signing and verification.
 
 **Depends on:** Milestone 1.
 
 **Approach:** this milestone wraps the `jsonwebtoken` crate (already a
-workspace dependency); it does not reimplement RSA. Tavern builds a thin layer
+workspace dependency); it does not reimplement RSA. Realmforge builds a thin layer
 over the library: load a keypair from PEM, sign RS256 tokens with our claims,
 verify them, publish the public key as a JWK, and model key rotation
 (active/retired).
@@ -208,7 +208,7 @@ verify them, publish the public key as a JWK, and model key rotation
 - [x] Sign a token, decode it, verify the signature.
 - [x] JWKS round-trip: published JWK verifies a signed token.
 
-### Milestone 6 — `tavern-db`: remaining schema and repos
+### Milestone 6 — `realmforge-gate-db`: remaining schema and repos
 
 **Goal:** the full data model and seeded known clients.
 
@@ -228,7 +228,7 @@ verify them, publish the public key as a JWK, and model key rotation
 - [x] Migration applies on a clean database.
 - [x] Repository tests pass; seeded clients are queryable.
 
-### Milestone 7 — `tavern-account`: registration and the shared ticket-mint backend
+### Milestone 7 — `realmforge-gate-account`: registration and the shared ticket-mint backend
 
 **Goal:** account registration plus the shared login-ticket backend that every
 generation's transport delegates to.
@@ -255,7 +255,7 @@ generation's transport delegates to.
       client-side in the test, submit, assert a session and a one-time ticket.
 - [x] Wrong password is rejected; a replayed ticket is rejected.
 
-### Milestone 8 — `tavern-account`: game-client bnet login
+### Milestone 8 — `realmforge-gate-account`: game-client bnet login
 
 **Goal:** real game clients can log in over `/bnetserver/login/`.
 
@@ -288,7 +288,7 @@ M18). All paths mint the same login ticket through the shared backend.
       assert a login ticket is issued.
 - [x] Wrong password is rejected for both proof schemes.
 
-### Milestone 9 — `tavern-oauth`: OIDC provider (desktop-app transport)
+### Milestone 9 — `realmforge-gate-oauth`: OIDC provider (desktop-app transport)
 
 **Goal:** the full OAuth round-trip works, including the desktop-app grant.
 
@@ -319,7 +319,7 @@ covered by any library anyway.
 - [x] Refresh-token grant rotates and revokes.
 - [x] Desktop-app token-exchange test: a BGS JWT exchanges for a DPLT.
 
-### Milestone 10 — `tavern-account`: management API and UI
+### Milestone 10 — `realmforge-gate-account`: management API and UI
 
 **Goal:** the account management experience, server-rendered.
 
@@ -357,7 +357,7 @@ covered by any library anyway.
 
 **Build:**
 
-- `oauth-server` and `account-server` binaries: load config, build the pool,
+- `realmforge-gate-oauth-server` and `realmforge-gate-account-server` binaries: load config, build the pool,
   mount the router, bind, expose `/health` and `/ready`.
 - Cross-service end-to-end flow wiring.
 
@@ -367,7 +367,7 @@ covered by any library anyway.
       bnet login, the browser web login, and the desktop-app OAuth round-trip
       end to end.
 - [x] `oauth2c` validation: run `oauth2c [issuer-url]` against the running
-      `oauth-server` for the authorization_code grant (with PKCE), the
+      `realmforge-gate-oauth-server` for the authorization_code grant (with PKCE), the
       client_credentials grant, and the token-exchange grant. All must succeed
       with real form-encoded requests and browser-driven flows. This is a
       **mandatory** gate per the Rules section.
@@ -385,12 +385,12 @@ field names, cookie chains, CSRF, redirect chains) needs correction.
 
 **Depends:** Milestone 11.
 
-**Scope:** `tavern-account` handlers (login, api, bnet) and `tavern-oauth`
-handlers (authorize, token, claims). No changes to `tavern-core` crypto or
-`tavern-db` repositories (except the `Claims` struct in `tavern-core/jwt.rs`
+**Scope:** `realmforge-gate-account` handlers (login, api, bnet) and `realmforge-gate-oauth`
+handlers (authorize, token, claims). No changes to `realmforge-gate-core` crypto or
+`realmforge-gate-db` repositories (except the `Claims` struct in `realmforge-gate-core/jwt.rs`
 which gains fields).
 
-#### A. Login flow — form-encoded two-step (`tavern-account/src/login.rs`)
+#### A. Login flow — form-encoded two-step (`realmforge-gate-account/src/login.rs`)
 
 Source of truth: the SRP login network capture, steps A.1–A.4.
 
@@ -470,7 +470,7 @@ SameSite=None`:
 | `BA-tassadar-cl` | `/login` | session | Client nonce |
 | `cl` | `/login` | session | Same as BA-tassadar-cl |
 
-Tavern sets all 6 cookies matching the capture. For a multi-region deployment
+Realmforge sets all 6 cookies matching the capture. For a multi-region deployment
 with region-specific hosts, the domain is the base domain (e.g.,
 `wowemu.dev`).
 
@@ -843,7 +843,7 @@ and manage session lifecycle.
       (oauth-oidc-implementation.md, oauth-api-gateway.md).
 
 **Goal:** the Phoenix desktop app's OAuth client_sso and token-exchange
-flows work end-to-end with Tavern.
+flows work end-to-end with Realmforge.
 
 **Depends:** Milestones 15, 18.
 

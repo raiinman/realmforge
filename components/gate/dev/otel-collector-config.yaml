@@ -1,9 +1,9 @@
-# OpenTelemetry Collector config for local Tavern development.
+# OpenTelemetry Collector config for local Realmforge development.
 #
 # Receives OTLP/HTTP on :4318 from the three servers and exposes a Prometheus
 # scrape endpoint on :19090 (the collector's own telemetry uses :8888 internally).
 # resource_to_telemetry_conversion turns the service.name resource attribute into
-# a metric label so oauth-server, account-server, and bgs-server are
+# a metric label so realmforge-gate-oauth-server, realmforge-gate-account-server, and realmforge-gate-bgs-server are
 # distinguishable in a single scrape.
 receivers:
   otlp:

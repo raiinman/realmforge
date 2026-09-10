@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Build the three Tavern service images with the builder pattern.
+# Build the three Realmforge service images with the builder pattern.
 #
 #   ./deploy/build.sh            build all three (tag: latest)
 #   ./deploy/build.sh account    build one service only
@@ -17,10 +17,10 @@ SERVICES=(account oauth bgs)
 
 build_one() {
 	local name="$1"
-	echo "==> building tavern/${name}-server:${TAG}"
+	echo "==> building realmforge/${name}-server:${TAG}"
 	podman build \
 		-f "deploy/${name}-server.Containerfile" \
-		-t "tavern/${name}-server:${TAG}" \
+		-t "realmforge/${name}-server:${TAG}" \
 		.
 }
 

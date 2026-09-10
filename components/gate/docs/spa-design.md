@@ -124,9 +124,9 @@ Used sparingly, matching the flat design of the source
 |             |                                              |
 +----------------------------------------------------------+
 |  Footer                                                   |
-|  Tavern · WoW Emulation · Digital Preservation           |
-|  Tavern is free software under the AGPL 3.0 license.      |
-|  Tavern Account Management · Support                      |
+|  Realmforge · WoW Emulation · Digital Preservation           |
+|  Realmforge is free software under the AGPL 3.0 license.      |
+|  Realmforge Account Management · Support                      |
 +----------------------------------------------------------+
 ```
 
@@ -385,7 +385,7 @@ Client redirects to /login/en/
 ### File Layout
 
 ```text
-crates/tavern-account/static/
+crates/realmforge-gate-account/static/
   style.css       # Shared CSS: variables, typography, layout,
                   #   cards, badges, forms, buttons, loading/error/empty
   spa.js          # SPA JavaScript: bootstrap, routing, page renders,
@@ -483,7 +483,7 @@ viewport.
 
 | Email Element | SPA Equivalent | Notes |
 | --- | --- | --- |
-| Logo (Tavern emblem, two theme PNGs) | Top-bar emblem + wordmark (`/static/tavern-logo-*.png`) | Same black-on-light / white-on-dark variants under `prefers-color-scheme` |
+| Logo (Realmforge emblem, two theme PNGs) | Top-bar emblem + wordmark (`/static/realmforge-logo-*.png`) | Same black-on-light / white-on-dark variants under `prefers-color-scheme` |
 | Dark background (`#15171e`) | Page background (`--bg` dark) | Same value |
 | Body text (`#d5d7dd`) | Text color (`--text` dark) | Same value |
 | Footer text/layout | Page footer | Same 11px, same links, same AGPL mention |

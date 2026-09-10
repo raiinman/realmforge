@@ -26,7 +26,7 @@ PBKDF2 iterations. Verifiers match the reference implementation's
 Seed with:
 
 ```bash
-podman exec -i tavern-db psql -U tavern -d tavern < docs/test-accounts.sql
+podman exec -i realmforge-gate-db psql -U realmforge -d realmforge < docs/test-accounts.sql
 ```
 
 ## Integration Test Accounts
@@ -37,8 +37,8 @@ cleans up its own rows. These accounts do not need to be pre-seeded.
 
 ## Test Signing Key
 
-All tokens are signed with `keys/signing.pem` (kid: `tavern-1`, environment:
-`demo`). The oauth-server logs a warning when this key is used. Generate a
+All tokens are signed with `keys/signing.pem` (kid: `realmforge-1`, environment:
+`demo`). The realmforge-gate-oauth-server logs a warning when this key is used. Generate a
 production key with:
 
 ```bash
@@ -47,20 +47,20 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/signing.p
 
 ## Manual oauth2c Flow
 
-1. Start the database: `podman start tavern-db`
+1. Start the database: `podman start realmforge-gate-db`
 2. Start the account server:
 
    ```bash
-   DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-     cargo run -p account-server
+   DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+     cargo run -p realmforge-gate-account-server
    ```
 
 3. Start the OAuth server:
 
    ```bash
-   DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
+   DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
      ISSUER_URL=http://localhost:8080 \
-     cargo run -p oauth-server
+     cargo run -p realmforge-gate-oauth-server
    ```
 
 4. Run oauth2c against the OAuth server:

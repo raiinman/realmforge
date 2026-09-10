@@ -1,6 +1,6 @@
 # SRP6a Implementation
 
-> **Status:** Implemented (`tavern-core/src/srp/`, M4). Verified against the
+> **Status:** Implemented (`realmforge-gate-core/src/srp/`, M4). Verified against the
 > C++ `srp_reference` tool and a pure-Python reference reproduction for
 > byte-accurate v2 verifiers. Grounded in the captured Battle.net web-login
 > SRP code (`srp6a-routines.worker.js`, `srp.js`) and the documented
@@ -10,17 +10,17 @@
 
 ## Scope
 
-Tavern's SRP6a implements the **Battle.net web-login password proof**, used by
+Realmforge's SRP6a implements the **Battle.net web-login password proof**, used by
 `account.battle.net/login/srp` and `/login/{locale}/password`. It is the only
 password-based credential path. The game-client BGS auth and the OAuth token
 layer are separate and do not use SRP.
 
-## Two SRP variants — Tavern uses the modern one
+## Two SRP variants — Realmforge uses the modern one
 
-The WoW ecosystem has two unrelated SRP flavors. Tavern does **not** use the
+The WoW ecosystem has two unrelated SRP flavors. Realmforge does **not** use the
 legacy one:
 
-| | Legacy realm auth (`wow_srp`) | **Battle.net web login (Tavern)** |
+| | Legacy realm auth (`wow_srp`) | **Battle.net web login (Realmforge)** |
 | --- | --- | --- |
 | Prime size | 256-bit | **2048-bit** |
 | Generator | 7 | **2** |
@@ -33,7 +33,7 @@ variant. It is a useful reference for SRP-6a structure and tested against real
 WoW logins, but its parameters and KDF do **not** match Battle.net's modern web
 login. A direct port would implement the wrong variant.
 
-Tavern implements a local SRP6a tailored to the Battle.net web-login
+Realmforge implements a local SRP6a tailored to the Battle.net web-login
 parameters. `wow_srp` is consulted as a structural reference only.
 
 ## Authoritative reference found
@@ -61,7 +61,7 @@ Server-negotiated, returned by `POST /login/srp`:
 | `salt` s | 32 random bytes | per-credential |
 | `public_B` | server ephemeral | per login attempt |
 
-The v1 prime differs (`BnetSRP6v1Base::N`, also 1024-bit). Tavern targets v2.
+The v1 prime differs (`BnetSRP6v1Base::N`, also 1024-bit). Realmforge targets v2.
 
 ## Byte-order conventions (three distinct ones)
 
@@ -73,17 +73,17 @@ tool and the pure-Python reference reproduction.
 1. **Verifier / credential output is little-endian**, exact significant byte
    length, no padding to N's size. This is `ToByteVector` + `ByteArrayToHexStr`.
    The stored `verifier` and the hex served in challenges use this encoding.
-   Internally Tavern holds the verifier as a big-endian `BigInt` (the natural
+   Internally Realmforge holds the verifier as a big-endian `BigInt` (the natural
    math representation); it must reverse to little-endian when serializing to
    the wire or the `credentials` table to match clients and reference servers.
 2. **v2 private exponent `x` is big-endian, signed** (the `0x80` sign hack is
    `int.from_bytes(..., signed=True)`); **v1 `x` is little-endian**. Same
-   function name, opposite conventions. Tavern implements v2.
+   function name, opposite conventions. Realmforge implements v2.
 3. **All internal SRP math** (k, u, M1/M2 evidence) is **big-endian**, padded
    to the 256-byte field width (`BN_bn2binpad`, `littleEndian=false`).
 
 The `%(N-1)` reduction is `BN_nnmod` — always non-negative — matching Python's
-floored `%` and Tavern's normalize-after-mod.
+floored `%` and Realmforge's normalize-after-mod.
 
 ## Algorithm (exact, from reference `BnetSRP6v2`)
 
@@ -135,9 +135,9 @@ The server stores `(salt, verifier, iterations, version)`, never the password.
 On login it receives the client's `A` and `M1`, computes its own `S` and `M1`,
 and accepts only if they are equal. It rejects `A mod N == 0` and `u mod N == 0`.
 
-## Implementation plan (Milestone 4, `tavern-core`)
+## Implementation plan (Milestone 4, `realmforge-gate-core`)
 
-Pure, no I/O, unit-tested. New modules under `tavern-core/src/`:
+Pure, no I/O, unit-tested. New modules under `realmforge-gate-core/src/`:
 
 - `srp/mod.rs` — public API: `compute_verifier`, `ServerSession`.
 - `srp/groups.rs` — the 2048-bit prime `AC6BDB41...73` (reference `N`) and
@@ -151,14 +151,14 @@ Pure, no I/O, unit-tested. New modules under `tavern-core/src/`:
 ### Dependencies
 
 - `sha2` (SHA-256 for k/u/M1; SHA-512 for the KDF), `pbkdf2`, `hmac`, `digest`
-  — pure-Rust crypto, no system libs. Add to `tavern-core` Cargo deps (the
+  — pure-Rust crypto, no system libs. Add to `realmforge-gate-core` Cargo deps (the
   crate remains pure: no tokio, no sqlx).
 - Big integers: `num-bigint` (pure Rust) is sufficient at SRP proof frequency.
   Avoid `rug`/GMP to keep the build hermetic.
 
 ### Verification
 
-- **Authoritative cross-check**: `tavern-core` computes the v2 verifier for
+- **Authoritative cross-check**: `realmforge-gate-core` computes the v2 verifier for
   all 10 reference tool combos (fixed zero salt) and asserts byte
   equality with both the C++ reference tool and the pure-Python reference
   reproduction. The reference value
@@ -174,6 +174,6 @@ Pure, no I/O, unit-tested. New modules under `tavern-core/src/`:
 ## Open question resolved
 
 The exact served `modulus` is no longer unknown: the reference `BnetSRP6v2Base::N`
-(`AC6BDB41...73`) is the canonical value and is hardcoded server-side. Tavern
+(`AC6BDB41...73`) is the canonical value and is hardcoded server-side. Realmforge
 uses it directly. The KDF hash is **SHA-512** (PBKDF2-HMAC-SHA-512), not
 SHA-256 — the session hashes (k, u, M1) are SHA-256.

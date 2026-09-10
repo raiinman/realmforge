@@ -1,21 +1,21 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Builder-pattern container for the Tavern account server (web + API + login).
+# Builder-pattern container for the Realmforge account server (web + API + login).
 #
 # Build:
-#   podman build -f deploy/account-server.Containerfile -t tavern/account-server:latest .
+#   podman build -f deploy/realmforge-gate-account-server.Containerfile -t realmforge/realmforge-gate-account-server:latest .
 #
 # Run (signing key as a podman secret — bind mounts of the demo key fail
 # because the container user (uid 10001) cannot read the 0600 host file):
-#   podman secret create tavern-signing keys/signing.pem
-#   podman run -d --name tavern-account --network tavern-net \
+#   podman secret create realmforge-signing keys/signing.pem
+#   podman run -d --name realmforge-gate-account --network realmforge-net \
 #     -p 127.0.0.1:8080:8080 \
-#     --secret tavern-signing,type=mount,target=signing.pem \
-#     -e DATABASE_URL=postgres://tavern:tavern@tavern-db:5432/tavern \
+#     --secret realmforge-signing,type=mount,target=signing.pem \
+#     -e DATABASE_URL=postgres://realmforge:realmforge@realmforge-gate-db:5432/realmforge \
 #     -e BIND_ADDR=0.0.0.0:8080 \
 #     -e SIGNING_KEY_PATH=/run/secrets/signing.pem \
-#     -e SMTP_HOST=tavern-mail -e SMTP_PORT=1025 \
-#     tavern/account-server:latest
+#     -e SMTP_HOST=realmforge-mail -e SMTP_PORT=1025 \
+#     realmforge/realmforge-gate-account-server:latest
 #
 # Runtime deps: glibc only. The Postgres driver (sqlx, runtime-tokio-rustls)
 # is pure Rust — no libpq, no OpenSSL. ca-certificates covers outbound TLS
@@ -29,7 +29,7 @@ FROM docker.io/library/rust:1.97-bookworm AS builder
 WORKDIR /build
 COPY . .
 
-RUN cargo build --release --locked -p account-server
+RUN cargo build --release --locked -p realmforge-gate-account-server
 
 # --- Runtime stage ---------------------------------------------------------
 FROM docker.io/library/debian:bookworm-slim
@@ -37,10 +37,10 @@ FROM docker.io/library/debian:bookworm-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --create-home tavern
+    && useradd --system --uid 10001 --create-home realmforge
 
-COPY --from=builder /build/target/release/account-server /usr/local/bin/account-server
+COPY --from=builder /build/target/release/realmforge-gate-account-server /usr/local/bin/realmforge-gate-account-server
 
-USER tavern
+USER realmforge
 EXPOSE 8080
-ENTRYPOINT ["/usr/local/bin/account-server"]
+ENTRYPOINT ["/usr/local/bin/realmforge-gate-account-server"]

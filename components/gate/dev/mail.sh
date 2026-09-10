@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Control the Tavern dev mail catcher (mailcrab) via podman.
+# Control the Realmforge dev mail catcher (mailcrab) via podman.
 # Catches all outbound SMTP so welcome/verification emails can be
-# inspected in a browser. SMTP on 127.0.0.1:1025 (the account-server
+# inspected in a browser. SMTP on 127.0.0.1:1025 (the realmforge-gate-account-server
 # default), web UI on http://127.0.0.1:1080.
 #
 #   ./dev/mail.sh up      start mailcrab
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 IMAGE="docker.io/marlonb/mailcrab:latest"
-NAME="tavern-mail"
+NAME="realmforge-mail"
 SMTP_PORT="1025"
 UI_PORT="1080"
 

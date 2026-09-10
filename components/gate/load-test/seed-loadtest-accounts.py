@@ -6,7 +6,7 @@
 # existing test-accounts.sql seed.
 #
 # Usage:
-#   python3 load-test/seed-loadtest-accounts.py --count 50 | podman exec -i tavern-db psql -U tavern -d tavern  # noqa: E501
+#   python3 load-test/seed-loadtest-accounts.py --count 50 | podman exec -i realmforge-gate-db psql -U realmforge -d realmforge  # noqa: E501
 
 import argparse
 import os

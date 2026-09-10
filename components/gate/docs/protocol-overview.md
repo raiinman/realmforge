@@ -1,6 +1,6 @@
 # Protocol Overview
 
-Tavern reimplements the Battle.net account and authentication surfaces a
+Realmforge reimplements the Battle.net account and authentication surfaces a
 retired WoW Classic client needs to log in. This page is the high-level map;
 details live in the linked documents.
 
@@ -34,9 +34,9 @@ DPLT platform token.
 
 ## Out of scope
 
-- The legacy 256-bit realm SRP6 (retail 2.4.3/3.3.5a) — Tavern uses the
+- The legacy 256-bit realm SRP6 (retail 2.4.3/3.3.5a) — Realmforge uses the
   modern 2048-bit BnetSRP6v2, not the legacy variant.
-- The world/gameplay server — tavern completes the pre-realm-join handoff
+- The world/gameplay server — realmforge completes the pre-realm-join handoff
   (`Command_RealmJoinRequest_v1` → `Param_ServerAddresses` +
   `Param_JoinSecret` + `Param_RealmJoinTicket` + `Param_BnetSessionKey`,
   world address from `REALM_ADDRESS`/`REALM_PORT`) and stops there; the

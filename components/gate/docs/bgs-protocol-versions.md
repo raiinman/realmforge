@@ -86,8 +86,8 @@ and response messages use version-specific method IDs and message types.
 
 - WowPacketParser `BattleNet.V37165/Parsers/Authentication.cs`
 - WowPacketParser `Enums/Battlenet/Command.cs`
-- Tavern RE docs `tavern-interop-analysis.md`
-- Tavern `service_hash.rs` (v1 hashes)
+- Realmforge RE docs `realmforge-interop-analysis.md`
+- Realmforge `service_hash.rs` (v1 hashes)
 
 ## Channel Detection
 
@@ -99,10 +99,10 @@ non-ConnectionService frame and matching against known v1/v2 hashes.
 ## BGS service surface — implementation status (2026-08-01)
 
 The 1.13.2 client's full BGS surface (verified against the client
-binary, `aurora-rpc-catalog.md`) and tavern's status. Double-checked
-2026-08-01 against the `bin/bgs-server` source.
+binary, `aurora-rpc-catalog.md`) and realmforge's status. Double-checked
+2026-08-01 against the `bin/realmforge-gate-bgs-server` source.
 
-| Service (v1 hash) | Direction | Tavern status |
+| Service (v1 hash) | Direction | Realmforge status |
 |---|---|---|
 | ConnectionService `0x65446991` | bidir | Connect (1) done; Echo (3) done (echo back); KeepAlive (5) done (success response); Encrypt (6), RequestDisconnect (7) not handled; Bind (2) skipped via `use_bindless_rpc`; ForceDisconnect (4) done (shutdown broadcast) |
 | AuthenticationServer `0x0DECFC01` | C->S | Logon, SSO, VerifyWebCredentials, GenerateWebCredentials, SelectGameAccount done; LogonUpdate (10) no-op |
@@ -136,4 +136,4 @@ binary, `aurora-rpc-catalog.md`) and tavern's status. Double-checked
 
 The boundary: `Command_RealmJoinRequest_v1` returns the realm address
 and join secret; the client then connects to the game server
-(tavern-game, not yet implemented).
+(realmforge-game, not yet implemented).

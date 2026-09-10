@@ -10,7 +10,7 @@
 #   MAX_BGS_LOGINS=1 python3 load-test/bgs-queue-test.py
 #
 # Prerequisites:
-#   A running bgs-server with MAX_BGS_LOGINS set to a low value (e.g., 1).
+#   A running realmforge-gate-bgs-server with MAX_BGS_LOGINS set to a low value (e.g., 1).
 #   pip3 install --user websocket-client protobuf
 
 import argparse

@@ -17,7 +17,7 @@ ACCOUNT_ID="${1:-1001}"
 REGION="${2:-1}"
 NAME="BTEST-$(date +%s)-$$"
 
-podman exec -i tavern-db psql -U tavern -d tavern -v ON_ERROR_STOP=1 >/dev/null <<SQL
+podman exec -i realmforge-gate-db psql -U realmforge -d realmforge -v ON_ERROR_STOP=1 >/dev/null <<SQL
 INSERT INTO service_tickets (st, account_id, region, expires_at)
 VALUES ('$NAME', $ACCOUNT_ID, $REGION, NOW() + interval '24 hours');
 SQL

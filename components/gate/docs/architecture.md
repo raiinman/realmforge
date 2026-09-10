@@ -20,7 +20,7 @@ because that service shares the same account database.
   omitted.
 - **Simple persistence.** One relational database, schema managed by SQL
   migrations, accessed through `sqlx`.
-- **Multi-region deployable.** The Tavern installation must support
+- **Multi-region deployable.** The Realmforge installation must support
   regionally prefixed hosts (e.g., `us.account.wowemu.dev`,
   `kr.account.wowemu.dev`) and multi-locale login (`/login/en/`,
   `/login/ko/`, …) matching the real Battle.net regional deployment model.
@@ -29,7 +29,7 @@ because that service shares the same account database.
 
 ## Service Topology
 
-Tavern serves **all advertised client lines**, each logging in over the same
+Realmforge serves **all advertised client lines**, each logging in over the same
 `/bnetserver/login/` path with a `LoginForm` envelope, differing only in the
 password proof. Known-working reference forks and network captures establish
 that the right shape is one service with one front-end transport, because
@@ -65,8 +65,8 @@ Two runtime processes share one workspace and one database:
 
 | Process         | Replaces                  | Transports served |
 | --------------- | ------------------------- | ----------------- |
-| `account-server`| `account.battle.net` + bnetserver | game-client bnet login (all lines), browser `/login/*`, registration, account API, UI |
-| `oauth-server`  | `oauth.battle.net`        | OAuth/OIDC (authorize, token incl. desktop-app token-exchange, userinfo, JWKS, revoke) |
+| `realmforge-gate-account-server`| `account.battle.net` + bnetserver | game-client bnet login (all lines), browser `/login/*`, registration, account API, UI |
+| `realmforge-gate-oauth-server`  | `oauth.battle.net`        | OAuth/OIDC (authorize, token incl. desktop-app token-exchange, userinfo, JWKS, revoke) |
 
 The account service owns identity, credentials, the web UI, and the per-
 generation game-client login transports; the OAuth service owns authorization
@@ -77,37 +77,37 @@ the account database and the SRP algorithm (where SRP applies). A future
 ## Workspace Layout
 
 ```text
-tavern/
+realmforge/
 ├── Cargo.toml                 # [workspace], shared [workspace.dependencies]
 ├── crates/
-│   ├── tavern-core/           # domain types, errors, config, SRP6a, JWT/JWKS
-│   ├── tavern-db/             # sqlx pool, embedded migrations, repositories
-│   ├── tavern-oauth/          # OIDC provider: authorize, token (+exchange), JWKS
-│   ├── tavern-account/        # bnet login (all lines), web login, account API, UI
-│   └── tavern-bgs/            # BGS protobuf codecs, frame format, service hashes
+│   ├── realmforge-gate-core/           # domain types, errors, config, SRP6a, JWT/JWKS
+│   ├── realmforge-gate-db/             # sqlx pool, embedded migrations, repositories
+│   ├── realmforge-gate-oauth/          # OIDC provider: authorize, token (+exchange), JWKS
+│   ├── realmforge-gate-account/        # bnet login (all lines), web login, account API, UI
+│   └── realmforge-gate-bgs/            # BGS protobuf codecs, frame format, service hashes
 └── bin/
-    ├── oauth-server/          # composes tavern-oauth + tavern-db
-    ├── account-server/        # composes tavern-account + tavern-db
-    └── bgs-server/            # BGS v1 WSS transport (M17/M18)
+    ├── realmforge-gate-oauth-server/          # composes realmforge-gate-oauth + realmforge-gate-db
+    ├── realmforge-gate-account-server/        # composes realmforge-gate-account + realmforge-gate-db
+    └── realmforge-gate-bgs-server/            # BGS v1 WSS transport (M17/M18)
 ```
 
 Each crate has one responsibility:
 
-- **`tavern-core`** — pure domain types (`Account`, `Credential`, `Client`,
+- **`realmforge-gate-core`** — pure domain types (`Account`, `Credential`, `Client`,
   `Token`), the error enum (`thiserror`), config loading, and pure crypto
   helpers (SRP6a math, JWT/JWKS encoding). No I/O, fully unit-testable.
-- **`tavern-db`** — owns the `sqlx` connection pool, runs migrations on startup,
+- **`realmforge-gate-db`** — owns the `sqlx` connection pool, runs migrations on startup,
   and exposes repository functions (one module per aggregate). Compile-time
   checked queries via `sqlx::query!`.
-- **`tavern-oauth`** — the OIDC provider as an `axum` router: discovery,
+- **`realmforge-gate-oauth`** — the OIDC provider as an `axum` router: discovery,
   authorize, the token grants (including the desktop-app RFC 8693
   token-exchange), token signing, JWKS, introspection, revocation.
-- **`tavern-account`** — the bnet-login service with one `/bnetserver/login/`
+- **`realmforge-gate-account`** — the bnet-login service with one `/bnetserver/login/`
   transport and a password-proof branch (plaintext for Vanilla, BnetSRP6v2
   for TBC/WotLK/Cata), plus the browser web login, registration, the
   account-management API, and `askama` server-rendered UI. All login paths
-  delegate to a shared ticket-mint module backed by `tavern-db` and
-  `tavern-core`.
+  delegate to a shared ticket-mint module backed by `realmforge-gate-db` and
+  `realmforge-gate-core`.
 
 Binaries stay thin: parse config, build the pool, mount the router, serve.
 
@@ -155,7 +155,7 @@ endpoints observed in the account-management-flow capture.
 A `revoked_tokens` table (by `jti`) is added if JWT access-token revocation is
 required; otherwise short lifetimes replace explicit revocation.
 
-## OAuth Provider (`tavern-oauth`)
+## OAuth Provider (`realmforge-gate-oauth`)
 
 This serves the Battle.net desktop app's (Phoenix) login: the app authenticates
 via BGS, receives a JWT, then exchanges it at `/token` for a DPLT token (RFC
@@ -183,7 +183,7 @@ Endpoints observed in the real service:
 
 **Tokens:** access tokens are RS256 JWTs (stateless, no per-token row); refresh
 tokens are opaque and stored so they can be rotated and revoked. Blizzard serves
-opaque user access tokens with introspection; Tavern defaults to JWT access
+opaque user access tokens with introspection; Realmforge defaults to JWT access
 tokens for simplicity. See Open Decisions.
 
 **Scopes and claims:** discovery advertises `openid` plus the account scopes
@@ -191,7 +191,7 @@ seen in traffic (`account.basic`, `account.full`, `account-settings.full`). The
 ID token and userinfo carry the claims observed in the specs: `sub`, `iss`,
 `aud`, `battle_tag`, `country_code`, and the standard OIDC fields.
 
-## Account Service (`tavern-account`)
+## Account Service (`realmforge-gate-account`)
 
 Three sub-routers, matching the captured surface:
 
@@ -203,7 +203,7 @@ by the same account service (see [Game-Client Authentication](#game-client-
 authentication-boundary)).
 
 Real `account.battle.net` serves these on a **region-prefixed host**
-(`kr.account.battle.net`, `eu.account.battle.net`, …). Tavern's official
+(`kr.account.battle.net`, `eu.account.battle.net`, …). Realmforge's official
 deployment is a single host — `account.wowemu.dev` — and routes these paths
 regardless of host prefix, so clients that construct a regional subdomain
 still reach them.
@@ -217,10 +217,10 @@ still reach them.
   a one-time service ticket that redirects back to the authorize endpoint.
 - `GET /login/ticket-login` — SSO ticket-login entry. Observed in real
   captures (Playwright traces from post-creation flow); not yet implemented
-  in Tavern.
+  in Realmforge.
 - `GET /login/sso/generate` — SSO ticket generation (the server-side endpoint
   that creates the encrypted ticket consumed by `/login/ticket-login`).
-  Not yet implemented; Tavern has `/login/sso` (the cross-site redirector)
+  Not yet implemented; Realmforge has `/login/sso` (the cross-site redirector)
   but not the generator.
 - `GET /geoip`, `GET /login/sso` — region routing and desktop SSO.
 
@@ -272,9 +272,9 @@ See [`docs/spa-design.md`](spa-design.md) for the full design specification.
 
 ## Game-Client Authentication (Boundary)
 
-The `bgs-server` binary handles BGS v1 WSS transport for desktop/Agent-driven
-logins. The HTTP JSON login paths (below) are served by `account-server`. Both
-share `tavern-db` and `tavern-core`, and both use the same BnetSRP6v2
+The `realmforge-gate-bgs-server` binary handles BGS v1 WSS transport for desktop/Agent-driven
+logins. The HTTP JSON login paths (below) are served by `realmforge-gate-account-server`. Both
+share `realmforge-gate-db` and `realmforge-gate-core`, and both use the same BnetSRP6v2
 credential.
 
 Two transports:
@@ -299,7 +299,7 @@ bytes), `Param_RealmJoinTicket` (the account handle the client echoes in
 `CMSG_AUTH_SESSION.RealmJoinTicket`), and `Param_BnetSessionKey` (the BGS
 session key). The realm listener address comes from `REALM_ADDRESS` /
 `REALM_PORT` (default `127.0.0.1:8085`). The realm server itself is an
-external integration; tavern stops at the join handoff.
+external integration; realmforge stops at the join handoff.
 
 ## End-to-End Request Flow
 
@@ -323,7 +323,7 @@ external integration; tavern stops at the join handoff.
 ## Cross-Cutting Concerns
 
 - **Config:** loaded from environment and an optional file (`DATABASE_URL`,
-  `BIND_ADDR`, `ISSUER_URL`, signing-key path). Shared loader in `tavern-core`.
+  `BIND_ADDR`, `ISSUER_URL`, signing-key path). Shared loader in `realmforge-gate-core`.
 - **Errors:** one error enum per crate, converted to HTTP responses in the
   service layer. No `unwrap` in non-test code without a justification comment.
 - **Tracing:** `tracing` + `tracing-subscriber`, request IDs via tower
@@ -342,7 +342,7 @@ setup:
 - A `Containerfile`/Quadlet or a small `podman` run wrapper brings up Postgres
   16 with a fixed database name, user, and password for development.
 - `DATABASE_URL` points at the containerized instance (default
-  `postgres://tavern:tavern@localhost:5432/tavern`).
+  `postgres://realmforge:realmforge@localhost:5432/realmforge`).
 - A named volume persists data across container restarts.
 - The same image is usable in CI without `podman`-specific tooling.
 
@@ -351,13 +351,13 @@ for local development.
 
 ### Query cache
 
-`tavern-db` uses `sqlx::query!` macros that are checked against the database at
+`realmforge-gate-db` uses `sqlx::query!` macros that are checked against the database at
 compile time. The checked metadata is cached in `.sqlx/` (committed) so the
 workspace builds without a database. After changing a query or the schema, with
 the dev database running, regenerate the cache:
 
 ```bash
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
   cargo sqlx prepare --workspace
 ```
 
@@ -365,10 +365,10 @@ Commit the regenerated `.sqlx/` files. CI builds with `SQLX_OFFLINE=true`.
 
 ## Decisions
 
-- **Official deployment hosts:** the Tavern installation runs at
+- **Official deployment hosts:** the Realmforge installation runs at
   `account.wowemu.dev` (account service) and `oauth.wowemu.dev` (OAuth
   provider). These stand in for `account.battle.net` / `oauth.battle.net`.
-  Real `account.battle.net` is region-prefixed (`kr.`/`eu.`/…); Tavern is a
+  Real `account.battle.net` is region-prefixed (`kr.`/`eu.`/…); Realmforge is a
   single host and routes by path regardless of subdomain prefix.
 - **Frontend rendering:** server-rendered `askama` templates. Mirrors the
   original SSR site and keeps a single Rust codebase.
@@ -390,7 +390,7 @@ Commit the regenerated `.sqlx/` files. CI builds with `SQLX_OFFLINE=true`.
 A complete Battle.net replacement eventually serves more than auth and account
 management. The full API-group inventory, with the scope decision for each:
 
-| Group | Surface | Tavern scope |
+| Group | Surface | Realmforge scope |
 | --- | --- | --- |
 | Entitlements | `POST /Client/EntitlementService/v1/GetOwnedLicenseIds` (Bearer DPLT, scope `commerce.entitlements.basic`) — the game-ownership gate | Stubbed (always-owned); see below |
 | Product catalog | BGS `entitlement_configuration` catalog fragments | post-MVP |
@@ -405,6 +405,6 @@ management. The full API-group inventory, with the scope decision for each:
 The entitlement check is the only commerce surface that gates play, and only
 when a client launches through the desktop app. A retired WoW Classic build
 launched directly against a private realm bypasses it — the realm server gates
-on the game account, not the desktop license API. Tavern stubs it
+on the game account, not the desktop license API. Realmforge stubs it
 (always-owned via `account_licenses`) for the MVP; a faithful storefront,
 wallet, catalog, and social surface are out of scope.

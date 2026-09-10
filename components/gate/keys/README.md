@@ -1,6 +1,6 @@
 # Signing Keys
 
-This directory contains demo RSA signing keys for the Tavern OAuth provider.
+This directory contains demo RSA signing keys for the Realmforge OAuth provider.
 
 ## `signing.pem`
 
@@ -15,4 +15,4 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/signing.p
 ```
 
 Then set `SIGNING_KEY_PATH=keys/signing.pem` (or an absolute path) when
-running `oauth-server`.
+running `realmforge-gate-oauth-server`.

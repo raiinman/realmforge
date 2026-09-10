@@ -1,6 +1,6 @@
 # OAuth / OIDC Implementation
 
-The OAuth/OIDC provider (`tavern-oauth`) is a hand-written implementation
+The OAuth/OIDC provider (`realmforge-gate-oauth`) is a hand-written implementation
 over the `jsonwebtoken` crate, verified against real Battle.net captures.
 An `oxide-auth` spike (2026-06-23) confirmed hand-written is the lower-risk
 path; the desktop-app token-exchange grant is non-standard and not covered
@@ -93,7 +93,7 @@ to the client ID. These claims are absent from access tokens per the capture.
 
 ## JWT Claims
 
-The `Claims` struct (`tavern-core/src/jwt.rs`) has 31 fields covering every
+The `Claims` struct (`realmforge-gate-core/src/jwt.rs`) has 31 fields covering every
 claim observed in real Battle.net JWT captures (7 always present, 24
 optional and skipped when empty).
 

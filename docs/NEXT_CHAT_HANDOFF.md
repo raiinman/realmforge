@@ -19,7 +19,7 @@ Before acting, read in this order:
 6. `docs/LEGAL_AND_SOURCE_BOUNDARY.md`
 7. `components/gate/REALMFORGE_DERIVATION.md`
 8. `components/gate/REALMFORGE_CONFIG.md`
-9. `docs/reconstruction/TAVERN_EXIT_LEDGER.md`
+9. `docs/reconstruction/UPSTREAM_EXIT_LEDGER.md`
 10. `docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`
 11. `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md`
 12. `docs/ROADMAP.md`

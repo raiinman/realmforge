@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Tavern SRP login load-test harness.
+# Realmforge SRP login load-test harness.
 #
-# Replays a configurable login burst against the account-server and reports
+# Replays a configurable login burst against the realmforge-gate-account-server and reports
 # throughput, latency percentiles, and error rates. Uses the existing SRP
 # handshake in dev/srp_auth_client.py.
 #
@@ -15,7 +15,7 @@
 #       --concurrency 10,50,100,200 --count 500 --json
 #
 # Prerequisites:
-#   A running account-server with seeded test accounts (docs/test-accounts.sql).
+#   A running realmforge-gate-account-server with seeded test accounts (docs/test-accounts.sql).
 
 import argparse
 import concurrent.futures
@@ -168,7 +168,7 @@ def run_one(server: str, concurrency: int, count: int) -> RunReport:
 def main() -> int:  # noqa: D103
     p = argparse.ArgumentParser(
         prog="login-harness",
-        description="Tavern SRP login load-test harness",
+        description="Realmforge SRP login load-test harness",
     )
     p.add_argument(
         "--server",

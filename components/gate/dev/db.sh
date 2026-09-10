@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Control the Tavern dev Postgres 16 database via podman.
+# Control the Realmforge dev Postgres 16 database via podman.
 #
 #   ./dev/db.sh up      start Postgres 16 (creates volume on first run)
 #   ./dev/db.sh down    stop and remove the container (keeps the volume)
 #   ./dev/db.sh reset   down, delete the volume, up (fresh database)
 #   ./dev/db.sh logs    tail container logs
-#   ./dev/db.sh psql    open a psql shell as the tavern user
+#   ./dev/db.sh psql    open a psql shell as the realmforge user
 #
-# Default connection: postgres://tavern:tavern@localhost:5432/tavern
+# Default connection: postgres://realmforge:realmforge@localhost:5432/realmforge
 
 set -euo pipefail
 
 IMAGE="docker.io/library/postgres:16"
-NAME="tavern-db"
-VOLUME="tavern-db-data"
+NAME="realmforge-gate-db"
+VOLUME="realmforge-gate-db-data"
 HOST_PORT="5432"
 
 cmd_up() {
@@ -25,14 +25,14 @@ cmd_up() {
 	fi
 	echo "Starting $NAME (Postgres 16) on 127.0.0.1:${HOST_PORT}..."
 	podman run -d --name "$NAME" \
-		-e POSTGRES_USER=tavern \
-		-e POSTGRES_PASSWORD=tavern \
-		-e POSTGRES_DB=tavern \
+		-e POSTGRES_USER=realmforge \
+		-e POSTGRES_PASSWORD=realmforge \
+		-e POSTGRES_DB=realmforge \
 		-p "127.0.0.1:${HOST_PORT}:5432" \
 		-v "${VOLUME}:/var/lib/postgresql/data" \
 		"$IMAGE" >/dev/null
 	echo "Started. Wait for readiness with: ./dev/db.sh logs"
-	echo "Connect: postgres://tavern:tavern@localhost:${HOST_PORT}/tavern"
+	echo "Connect: postgres://realmforge:realmforge@localhost:${HOST_PORT}/realmforge"
 }
 
 cmd_down() {
@@ -52,7 +52,7 @@ cmd_logs() {
 }
 
 cmd_psql() {
-	podman exec -it "$NAME" psql -U tavern -d tavern
+	podman exec -it "$NAME" psql -U realmforge -d realmforge
 }
 
 usage() {

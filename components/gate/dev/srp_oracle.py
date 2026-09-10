@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Independent golden-vector oracle for Tavern's BnetSRP6v2 implementation.
+"""Independent golden-vector oracle for Realmforge's BnetSRP6v2 implementation.
 
 Reimplements the algorithm (from the TrinityCore reference) using Python's
 stdlib (hashlib = OpenSSL, native int). Produces fixed-input values that the

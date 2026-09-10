@@ -3,24 +3,6 @@
 version = 4
 
 [[package]]
-name = "account-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "rustls",
- "rustls-pemfile",
- "tavern-account",
- "tavern-core",
- "tavern-db",
- "tavern-observability",
- "tokio",
- "tokio-rustls",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -242,35 +224,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba62675e8242a4c4e806d12f11d136e626e6c8361d6b829310732241652a178a"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "bgs-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "dashmap",
- "flate2",
- "futures-util",
- "hex",
- "opentelemetry",
- "prost",
- "rand 0.8.6",
- "rustls",
- "rustls-pemfile",
- "serde",
- "serde_json",
- "sqlx",
- "tavern-bgs",
- "tavern-db",
- "tavern-observability",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite 0.24.0",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
@@ -1472,20 +1425,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oauth-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "tavern-core",
- "tavern-db",
- "tavern-oauth",
- "tavern-observability",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1969,6 +1908,184 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
 dependencies = [
  "getrandom 0.3.4",
+]
+
+[[package]]
+name = "realmforge-gate-account"
+version = "0.1.0"
+dependencies = [
+ "askama",
+ "axum",
+ "base64",
+ "chrono",
+ "dashmap",
+ "futures",
+ "hex",
+ "hmac",
+ "http-body-util",
+ "lettre",
+ "num-bigint",
+ "num-traits",
+ "rand 0.8.6",
+ "realmforge-gate-core",
+ "realmforge-gate-db",
+ "realmforge-gate-observability",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "realmforge-gate-account-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "realmforge-gate-account",
+ "realmforge-gate-core",
+ "realmforge-gate-db",
+ "realmforge-gate-observability",
+ "rustls",
+ "rustls-pemfile",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "realmforge-gate-bgs"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "prost",
+ "prost-build",
+ "protoc-bin-vendored",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "realmforge-gate-bgs-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "dashmap",
+ "flate2",
+ "futures-util",
+ "hex",
+ "opentelemetry",
+ "prost",
+ "rand 0.8.6",
+ "realmforge-gate-bgs",
+ "realmforge-gate-db",
+ "realmforge-gate-observability",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite 0.24.0",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "realmforge-gate-core"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "base64",
+ "chrono",
+ "digest",
+ "hex",
+ "hmac",
+ "jsonwebtoken",
+ "num-bigint",
+ "num-traits",
+ "pbkdf2",
+ "rand 0.8.6",
+ "rsa",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "toml",
+ "uuid",
+]
+
+[[package]]
+name = "realmforge-gate-db"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "realmforge-gate-core",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "realmforge-gate-oauth"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64",
+ "chrono",
+ "hex",
+ "http-body-util",
+ "jsonwebtoken",
+ "moka",
+ "rand 0.8.6",
+ "realmforge-gate-account",
+ "realmforge-gate-core",
+ "realmforge-gate-db",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "realmforge-gate-oauth-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "realmforge-gate-core",
+ "realmforge-gate-db",
+ "realmforge-gate-oauth",
+ "realmforge-gate-observability",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "realmforge-gate-observability"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "sqlx",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2612,123 +2729,6 @@ name = "tagptr"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
-
-[[package]]
-name = "tavern-account"
-version = "0.1.0"
-dependencies = [
- "askama",
- "axum",
- "base64",
- "chrono",
- "dashmap",
- "futures",
- "hex",
- "hmac",
- "http-body-util",
- "lettre",
- "num-bigint",
- "num-traits",
- "rand 0.8.6",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "tavern-core",
- "tavern-db",
- "tavern-observability",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "tavern-bgs"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "prost",
- "prost-build",
- "protoc-bin-vendored",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "tavern-core"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "base64",
- "chrono",
- "digest",
- "hex",
- "hmac",
- "jsonwebtoken",
- "num-bigint",
- "num-traits",
- "pbkdf2",
- "rand 0.8.6",
- "rsa",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
- "toml",
- "uuid",
-]
-
-[[package]]
-name = "tavern-db"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "sqlx",
- "tavern-core",
- "thiserror 2.0.18",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "tavern-oauth"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64",
- "chrono",
- "hex",
- "http-body-util",
- "jsonwebtoken",
- "moka",
- "rand 0.8.6",
- "serde",
- "serde_json",
- "sha2",
- "sqlx",
- "tavern-account",
- "tavern-core",
- "tavern-db",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "tavern-observability"
-version = "0.1.0"
-dependencies = [
- "axum",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "sqlx",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "tempfile"

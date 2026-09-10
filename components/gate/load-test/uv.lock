@@ -27,7 +27,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tavern-test"
+name = "realmforge-test"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

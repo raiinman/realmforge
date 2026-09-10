@@ -26,7 +26,7 @@ except ImportError:
     print("install websocket-client: pip3 install --user websocket-client")
     sys.exit(1)
 
-# Service hash constants (from tavern-bgs/service_hash.rs)
+# Service hash constants (from realmforge-gate-bgs/service_hash.rs)
 AUTHENTICATION_CLIENT_V1 = 0x71240E35
 AUTHENTICATION_SERVER_V1 = 0x0DECFC01
 CONNECTION_SERVICE = 0x65446991
@@ -34,7 +34,7 @@ ACCOUNT_SERVICE = 0x62DA0891
 GET_ACCOUNT_STATE = 30
 GET_GAME_ACCOUNT_STATE = 31
 
-# BGS result code constants (from tavern-bgs/result_code.rs)
+# BGS result code constants (from realmforge-gate-bgs/result_code.rs)
 ERROR_OK = 0
 ERROR_GAME_ACCOUNT_NO_TIME = 30
 ERROR_GAME_ACCOUNT_SUSPENDED = 33

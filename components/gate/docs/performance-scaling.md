@@ -6,8 +6,8 @@
 > listed under [Remaining](#remaining). This document records what was
 > done, the measured baselines, and what is still open.
 
-This document records the concurrency analysis of the three Tavern binaries
-(`account-server`, `oauth-server`, `bgs-server`) against the target load of
+This document records the concurrency analysis of the three Realmforge binaries
+(`realmforge-gate-account-server`, `realmforge-gate-oauth-server`, `realmforge-gate-bgs-server`) against the target load of
 5,000–15,000 concurrent players — the range modern private servers reach.
 
 ## Outcome
@@ -29,7 +29,7 @@ against the running code on 2026-08-12.
 
 ### Phase 0 — Observability (OpenTelemetry) and Health Probes
 
-- `crates/tavern-observability` provides OTLP metrics (HTTP request
+- `crates/realmforge-gate-observability` provides OTLP metrics (HTTP request
   count/duration, SRP verify duration histogram, DB pool gauge) and a shared
   health router.
 - `/health`, `/ready`, `/startup` on all three binaries (verified 200 on
@@ -106,8 +106,8 @@ Before/after (200 logins, 200 accounts, pool=32):
 ### Phase 9 — Admission Control and Backpressure
 
 - `tokio::sync::Semaphore` concurrency limiter via
-  `MAX_CONCURRENT_REQUESTS` (default 1024) on account-server and
-  oauth-server; overloaded requests return `503 Service Unavailable`.
+  `MAX_CONCURRENT_REQUESTS` (default 1024) on realmforge-gate-account-server and
+  realmforge-gate-oauth-server; overloaded requests return `503 Service Unavailable`.
 - Verified at the time: `MAX_CONCURRENT_REQUESTS=10` with 50 concurrent SRP
   logins → 10 in flight, 90 get 503.
 
@@ -177,10 +177,10 @@ component-level scaling work.
 
 ## Horizontal Scaling Constraints
 
-- `account-server` and `oauth-server` scale freely: session state lives in
+- `realmforge-gate-account-server` and `realmforge-gate-oauth-server` scale freely: session state lives in
   Postgres and requests are short-lived. Round-robin or least-connections
   routing works.
-- `bgs-server` holds long-lived stateful connections. Scale on active
+- `realmforge-gate-bgs-server` holds long-lived stateful connections. Scale on active
   connection count; the load balancer must pin a player's socket to one pod
   (sticky sessions), or a pod loss drops everyone.
 - Restart bursts are the worst case. Phases 4 and 5 address the login

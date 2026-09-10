@@ -6,18 +6,18 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.97"
-authors = ["Daniel S. Reichenbach <danielsreichenbach@tuta.com>"]
+authors = ["Realmforge contributors"]
 license = "AGPL-3.0-only"
-repository = "https://github.com/wowemulation-dev/tavern"
+repository = "https://github.com/raiinman/realmforge"
 
 [workspace.dependencies]
 # Internal crates
-tavern-core = { path = "crates/tavern-core" }
-tavern-db = { path = "crates/tavern-db" }
-tavern-oauth = { path = "crates/tavern-oauth" }
-tavern-account = { path = "crates/tavern-account" }
-tavern-bgs = { path = "crates/tavern-bgs" }
-tavern-observability = { path = "crates/tavern-observability" }
+realmforge-gate-core = { path = "crates/realmforge-gate-core" }
+realmforge-gate-db = { path = "crates/realmforge-gate-db" }
+realmforge-gate-oauth = { path = "crates/realmforge-gate-oauth" }
+realmforge-gate-account = { path = "crates/realmforge-gate-account" }
+realmforge-gate-bgs = { path = "crates/realmforge-gate-bgs" }
+realmforge-gate-observability = { path = "crates/realmforge-gate-observability" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

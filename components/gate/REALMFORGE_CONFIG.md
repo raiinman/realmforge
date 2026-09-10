@@ -1,7 +1,7 @@
 # Realmforge Gate Configuration
 
 **Status:** active interim Gate contract  
-**Scope:** `components/gate/bin/bgs-server` only
+**Scope:** `components/gate/bin/realmforge-gate-bgs-server` only
 
 This document defines the Realmforge-facing configuration names for the inherited BGS compatibility process.
 
@@ -45,7 +45,7 @@ Setting the variable true is a **research override only**. It does not make that
 
 ## Known inherited configuration debt
 
-The current covered derivative still consumes inherited database-pool variables through `tavern_db::PoolConfig::from_env()`:
+The current covered derivative still consumes inherited database-pool variables through `realmforge_gate_db::PoolConfig::from_env()`:
 
 - `DB_POOL_MAX_CONNECTIONS`
 - `DB_POOL_MIN_CONNECTIONS`

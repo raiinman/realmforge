@@ -8,12 +8,12 @@
 ```bash
 # Reset and seed the database
 bash dev/db.sh reset
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo sqlx migrate run --source crates/tavern-db/migrations
-podman exec -i tavern-db psql -U tavern -d tavern < docs/test-accounts.sql
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo sqlx migrate run --source crates/realmforge-gate-db/migrations
+podman exec -i realmforge-gate-db psql -U realmforge -d realmforge < docs/test-accounts.sql
 
 # Seed BGS service tickets (required for VerifyWebCredentials)
-podman exec tavern-db psql -U tavern -d tavern << 'SQL'
+podman exec realmforge-gate-db psql -U realmforge -d realmforge << 'SQL'
 INSERT INTO service_tickets (st, account_id, region, expires_at)
 SELECT 'BTEST-' || generate_series, 1001, 1, NOW() + interval '24 hours'
 FROM generate_series(1, 50);
@@ -21,7 +21,7 @@ SQL
 
 # Seed load-test accounts (required for SRP load testing)
 uv run python load-test/seed-loadtest-accounts.py --count 200 | \
-  podman exec -i tavern-db psql -U tavern -d tavern
+  podman exec -i realmforge-gate-db psql -U realmforge -d realmforge
 ```
 
 ## Test Accounts
@@ -59,12 +59,12 @@ same fixed salt as the reference accounts.
 
 ```bash
 # Start all servers
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo run -p bgs-server &
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo run -p account-server &
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo run -p oauth-server &
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo run -p realmforge-gate-bgs-server &
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo run -p realmforge-gate-account-server &
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo run -p realmforge-gate-oauth-server &
 
 # BGS transport test
 uv run python load-test/bgs-client.py --flow logon

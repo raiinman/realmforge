@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Sign In - Realmforge</title>
+        <meta name="color-scheme" content="light dark" />
+        <link rel="stylesheet" href="/static/style.css" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    </head>
+    <body class="page-center">
+        <div class="card">
+            <div style="text-align:center;margin-bottom: var(--space-md)">
+                <img class="logo-mark logo-on-light"
+                    src="/static/realmforge-logo-light.png" width="64" height="64"
+                    alt="Realmforge" />
+                <img class="logo-mark logo-on-dark"
+                    src="/static/realmforge-logo-dark.png" width="64" height="64"
+                    alt="Realmforge" />
+            </div>
+            <h1>Sign In</h1>
+
+            <!-- Email step (shown on /login/{locale}/) -->
+            <form id="email-step" method="post" action="">
+                <div class="form-group">
+                    <label for="email">Email or Phone</label>
+                    <input
+                        type="text"
+                        id="email"
+                        name="accountName"
+                        placeholder="Email or Phone"
+                        required
+                        autocomplete="username"
+                    />
+                </div>
+                <input type="hidden" name="srpEnabled" value="false" />
+                <input
+                    type="hidden"
+                    name="csrftoken"
+                    id="email-csrftoken"
+                    value=""
+                />
+                <input
+                    type="hidden"
+                    name="sessionTimeout"
+                    id="session-timeout"
+                    value=""
+                />
+                <button type="submit" class="btn btn-primary">Continue</button>
+            </form>
+
+            <!-- Password step (shown on /login/{locale}/password) -->
+            <div id="password-step" class="hidden">
+                <p id="welcome-back" style="margin-bottom: var(--space-md)"></p>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                    />
+                </div>
+                <button
+                    type="button"
+                    id="login-button"
+                    class="btn btn-primary"
+                    onclick="doSrpLogin()"
+                >
+                    Log In
+                </button>
+                <a href="/login/en/" class="switch-account">Switch account</a>
+                <a
+                    href="/creation/flow/creation-full"
+                    class="switch-account"
+                    style="margin-top: var(--space-sm)"
+                >
+                    Create a free account
+                </a>
+            </div>
+
+            <div id="error" class="form-error hidden"></div>
+        </div>
+
+        <!-- prettier-ignore-start -->
+        <script>
+            // --- SRP6a client module (inline) ---
+            {{ srp6a_js|safe }}
+        </script>
+        <script>
+            // --- Form helpers ---
+
+            function showError(msg) {
+                const el = document.getElementById("error");
+                el.textContent = msg;
+                el.classList.remove("hidden");
+            }
+
+            function hideError() {
+                document.getElementById("error").classList.add("hidden");
+            }
+
+            function getCsrfToken() {
+                return crypto.randomUUID();
+            }
+
+            function getSessionTimeout() {
+                return String(Math.floor(Date.now() / 1000) + 3600);
+            }
+
+            // --- Page detection ---
+
+            const isPasswordPage =
+                window.location.pathname.includes("/password");
+            const email =
+                new URLSearchParams(window.location.search).get(
+                    "accountName",
+                ) || "";
+
+            if (isPasswordPage) {
+                document.getElementById("email-step").classList.add("hidden");
+                document
+                    .getElementById("password-step")
+                    .classList.remove("hidden");
+                document.querySelector("h1").textContent = "Welcome Back";
+                document.getElementById("welcome-back").textContent =
+                    email || "Enter your password to continue.";
+                document.getElementById("password").focus();
+            } else {
+                document.getElementById("email-csrftoken").value =
+                    getCsrfToken();
+                document.getElementById("session-timeout").value =
+                    getSessionTimeout();
+            }
+
+            // --- SRP login ---
+
+            async function doSrpLogin() {
+                const password = document.getElementById("password").value;
+                const btn = document.getElementById("login-button");
+                hideError();
+
+                if (!password) {
+                    showError("Please enter your password.");
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = "Signing in\u2026";
+
+                try {
+                    const srpResp = await fetch("/login/srp?csrfToken=true", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                        body: JSON.stringify({
+                            inputs: [
+                                { input_id: "account_name", value: email },
+                            ],
+                        }),
+                    });
+
+                    if (!srpResp.ok) {
+                        showError("Account not found or server error.");
+                        btn.disabled = false;
+                        btn.textContent = "Log In";
+                        return;
+                    }
+
+                    const challenge = await srpResp.json();
+                    const csrfToken = challenge.csrf_token;
+
+                    if (!csrfToken) {
+                        showError("Server did not provide a CSRF token.");
+                        btn.disabled = false;
+                        btn.textContent = "Log In";
+                        return;
+                    }
+
+                    const { publicA, clientEvidenceM1 } = await clientProof(
+                        challenge.username,
+                        password,
+                        challenge.salt,
+                        challenge.public_B,
+                        challenge.modulus,
+                        challenge.generator,
+                        challenge.iterations,
+                    );
+
+                    const publicAHex = publicA
+                        .toString(16)
+                        .padStart(512, "0")
+                        .toUpperCase();
+                    const m1Hex = clientEvidenceM1
+                        .toString(16)
+                        .padStart(64, "0")
+                        .toUpperCase();
+
+                    const dotPassword = ".".repeat(password.length);
+
+                    const body = new URLSearchParams();
+                    body.append("username", email);
+                    body.append("password", dotPassword);
+                    body.append("useSrp", "true");
+                    body.append("publicA", publicAHex);
+                    body.append("clientEvidenceM1", m1Hex);
+                    body.append("srpEnabled", "true");
+                    body.append("persistLogin", "on");
+                    body.append("csrftoken", csrfToken);
+                    body.append("accountName", email);
+                    body.append("usePasskey", "false");
+                    body.append("upgradeVerifier", "");
+
+                    const form = document.createElement("form");
+                    form.method = "POST";
+                    form.action = window.location.pathname;
+                    form.style.position = "absolute";
+                    form.style.left = "-9999px";
+
+                    for (const [key, value] of body) {
+                        const input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = key;
+                        input.value = value;
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                } catch (err) {
+                    showError(
+                        "An error occurred during login. Please try again.",
+                    );
+                    console.error("SRP login error:", err);
+                    btn.disabled = false;
+                    btn.textContent = "Log In";
+                }
+            }
+
+            document
+                .getElementById("password")
+                .addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        doSrpLogin();
+                    }
+                });
+        </script>
+        <!-- prettier-ignore-end -->
+    </body>
+</html>

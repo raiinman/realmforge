@@ -1,6 +1,6 @@
-# Testing Tavern End to End
+# Testing Realmforge End to End
 
-This document is the full verified process for testing Tavern: from a fresh
+This document is the full verified process for testing Realmforge: from a fresh
 database through the web interface and simulated game-client interactions.
 
 ## 0. Prerequisites
@@ -12,7 +12,7 @@ database through the web interface and simulated game-client interactions.
 
 ## 1. Fresh Database
 
-The `dev/db.sh` wrapper manages a Postgres 16 container named `tavern-db` on
+The `dev/db.sh` wrapper manages a Postgres 16 container named `realmforge-gate-db` on
 `127.0.0.1:5432`.
 
 ```bash
@@ -20,14 +20,14 @@ The `dev/db.sh` wrapper manages a Postgres 16 container named `tavern-db` on
 bash dev/db.sh reset
 
 # Verify the container is up
-podman ps --filter name=tavern-db --format "{{.Names}} {{.Status}}"
+podman ps --filter name=realmforge-gate-db --format "{{.Names}} {{.Status}}"
 ```
 
 ### 1.1 Migrations
 
 ```bash
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo sqlx migrate run --source crates/tavern-db/migrations
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo sqlx migrate run --source crates/realmforge-gate-db/migrations
 This applies all migrations (currently 25): accounts, oauth, credentials,
 game accounts, bgs sessions, catalog (licenses/products/rules), countries,
 privacy settings, account connections, communication preferences, locales,
@@ -38,7 +38,7 @@ binding, mandatory birth dates, ToS acceptance, and BGS session keys.
 ```bash
 # Reference accounts (1001-1010) with credentials, game accounts, licenses,
 # regions, suspension/game-time scenarios, and authenticator flags.
-podman exec -i tavern-db psql -U tavern -d tavern < docs/test-accounts.sql
+podman exec -i realmforge-gate-db psql -U realmforge -d realmforge < docs/test-accounts.sql
 
 # BGS service tickets: mint one per run with dev/ticket.sh (single-use).
 # Example:
@@ -47,13 +47,13 @@ bash dev/ticket.sh 1001  # smoke check: prints a ticket name
 
 # Optional: load-test accounts lt{0..N-1}@loadtest.local (password: loadtest)
 uv run python load-test/seed-loadtest-accounts.py --count 200 | \
-  podman exec -i tavern-db psql -U tavern -d tavern
+  podman exec -i realmforge-gate-db psql -U realmforge -d realmforge
 ```
 
 Verify the catalog:
 
 ```bash
-podman exec tavern-db psql -U tavern -d tavern -c \
+podman exec realmforge-gate-db psql -U realmforge -d realmforge -c \
   "SELECT license_id, description FROM catalog_licenses ORDER BY license_id;"
 ```
 
@@ -63,7 +63,7 @@ Dragonflight, `1106089` The War Within) plus 4 base products in
 
 ## 1.3 Mail Catcher (mailcrab)
 
-The account-server sends verification emails over SMTP. For local
+The realmforge-gate-account-server sends verification emails over SMTP. For local
 testing, a mailcrab container catches them. The server's SMTP defaults
 are `127.0.0.1:1025` (host) — exactly what mailcrab binds — so no
 server env overrides are needed when mailcrab is running.
@@ -106,19 +106,19 @@ Three binaries share the account database. Ports:
 
 | Service | Port | Env |
 |---|---|---|
-| `account-server` | 8080 | `DATABASE_URL`, `INSECURE_COOKIES` |
-| `oauth-server` | 8081 | `DATABASE_URL`, `BIND_ADDR=127.0.0.1:8081` |
-| `bgs-server` | 8119 (WS), 1119 (TCP) | `DATABASE_URL` |
+| `realmforge-gate-account-server` | 8080 | `DATABASE_URL`, `INSECURE_COOKIES` |
+| `realmforge-gate-oauth-server` | 8081 | `DATABASE_URL`, `BIND_ADDR=127.0.0.1:8081` |
+| `realmforge-gate-bgs-server` | 8119 (WS), 1119 (TCP) | `DATABASE_URL` |
 
-**Important:** for local testing over plain HTTP, start `account-server` with
+**Important:** for local testing over plain HTTP, start `realmforge-gate-account-server` with
 `INSECURE_COOKIES=1`. Without it, the SESSIONID/XSRF cookies carry the
 `Secure` attribute and the browser drops them, breaking web login.
 
 ### 3.1 Build first
 
 ```bash
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  cargo build -p account-server -p oauth-server -p bgs-server
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  cargo build -p realmforge-gate-account-server -p realmforge-gate-oauth-server -p realmforge-gate-bgs-server
 ```
 
 ### 3.2 Launch pattern (verified)
@@ -129,18 +129,18 @@ down mid-test.
 
 ```bash
 # Terminal 1 — account web + management API + login UI
-cd /path/to/tavern
-INSECURE_COOKIES=1 DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  nohup ./target/debug/account-server > /tmp/account-server.log 2>&1 < /dev/null & disown
+cd /path/to/realmforge
+INSECURE_COOKIES=1 DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  nohup ./target/debug/realmforge-gate-account-server > /tmp/realmforge-gate-account-server.log 2>&1 < /dev/null & disown
 
 # Terminal 2 — OAuth/OIDC provider
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
   BIND_ADDR=127.0.0.1:8081 ISSUER_URL=http://127.0.0.1:8081 \
-  nohup ./target/debug/oauth-server > /tmp/oauth-server.log 2>&1 < /dev/null & disown
+  nohup ./target/debug/realmforge-gate-oauth-server > /tmp/realmforge-gate-oauth-server.log 2>&1 < /dev/null & disown
 
 # Terminal 3 — BGS transport
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
-  nohup ./target/debug/bgs-server > /tmp/bgs-server.log 2>&1 < /dev/null & disown
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
+  nohup ./target/debug/realmforge-gate-bgs-server > /tmp/realmforge-gate-bgs-server.log 2>&1 < /dev/null & disown
 ```
 
 ### 3.3 Verify each server is up
@@ -149,8 +149,8 @@ Check the ports are actually bound before running any test:
 
 ```bash
 ss -tln | grep -E ':8080|:8081|:8119|:1119'
-# account-server: 127.0.0.1:8080, oauth-server: 127.0.0.1:8081,
-# bgs-server: 8119 and 1119
+# realmforge-gate-account-server: 127.0.0.1:8080, realmforge-gate-oauth-server: 127.0.0.1:8081,
+# realmforge-gate-bgs-server: 8119 and 1119
 
 # Health checks
 curl -sf http://127.0.0.1:8080/api/location/country-list >/dev/null && echo 'account OK'
@@ -237,7 +237,7 @@ button, and the overview API exposes the state:
 
 ```bash
 # 1. Make an account unverified and check the API
-podman exec tavern-db psql -U tavern -d tavern -c \
+podman exec realmforge-gate-db psql -U realmforge -d realmforge -c \
   "UPDATE accounts SET email_verified = FALSE WHERE id = 1001;"
 
 curl -sf http://127.0.0.1:8080/api/overview \
@@ -262,7 +262,7 @@ curl -sf http://127.0.0.1:1080/api/messages | python3 -c \
 # 4. Open the verification link from the email: /overview?ticket=<sealed>
 #    The dashboard consumes the ticket and marks email_verified = TRUE.
 #    Verify:
-podman exec tavern-db psql -U tavern -d tavern -c \
+podman exec realmforge-gate-db psql -U realmforge -d realmforge -c \
   "SELECT email_verified FROM accounts WHERE id = 1001;"
 # Expected: t
 ```
@@ -272,10 +272,10 @@ Battle.net flow, which the browser hits after clicking the email link).
 
 ## 5. OAuth / OIDC
 
-With `oauth-server` on 8081. **The `ISSUER_URL` must match `BIND_ADDR`**
+With `realmforge-gate-oauth-server` on 8081. **The `ISSUER_URL` must match `BIND_ADDR`**
 — oauth2c and other OAuth clients validate the discovery document's
 `issuer` against the URL they queried. The default issuer is
-`http://localhost:8080` (the account-server port); pointing oauth2c at
+`http://localhost:8080` (the realmforge-gate-account-server port); pointing oauth2c at
 8081 while the issuer says 8080 makes the discovery self-inconsistent
 and oauth2c fails with `failed to parse error response`:
 
@@ -307,8 +307,8 @@ the Phoenix desktop client). See `docs/oauth-oidc-implementation.md`
 §Validation for the oauth2c matrix.
 
 The browser flow connects the two servers: the web login mints a ticket
-(`ST`), redirects to `oauth-server` `/authorize`, which validates the ticket
-and issues an authorization code; the callback at `account-server`
+(`ST`), redirects to `realmforge-gate-oauth-server` `/authorize`, which validates the ticket
+and issues an authorization code; the callback at `realmforge-gate-account-server`
 `/callback/oauth2/code/account-settings` exchanges it for a management
 session (SESSIONID + XSRF-TOKEN cookies).
 
@@ -346,7 +346,7 @@ uv run python bgs-client.py --flow restore --sso-id <HEX>
 # the realm join carries it.
 uv run python bgs-client.py --flow character --ticket "$(bash ../dev/ticket.sh 1001)"
 
-# Queue test: restart bgs-server with MAX_BGS_LOGINS=1, then
+# Queue test: restart realmforge-gate-bgs-server with MAX_BGS_LOGINS=1, then
 # run 3 clients with the first holding the slot for 3s
 MAX_BGS_LOGINS=1 uv run python bgs-queue-test.py \
   --count 3 --hold-secs 3
@@ -392,9 +392,9 @@ python3 dev/srp_auth_client.py --server http://127.0.0.1:8080 \
 
 The same flow runs against podman containers instead of local binaries.
 Build the images with `deploy/build.sh`, then follow `docs/deployment.md`:
-one `tavern-net` bridge, Postgres + mailcrab + the three servers on it,
-signing key as a podman secret, and `SMTP_HOST=tavern-mail` on the
-account-server. The tests in sections 4-6 then run unchanged against the
+one `realmforge-net` bridge, Postgres + mailcrab + the three servers on it,
+signing key as a podman secret, and `SMTP_HOST=realmforge-mail` on the
+realmforge-gate-account-server. The tests in sections 4-6 then run unchanged against the
 published host ports (8080/8081/8119/1119). Verified 2026-08-04: full
 browser login, pages, email verification, OAuth, SRP, BGS logon/full/
 character, enforcement, and authenticator all pass against the containers.
@@ -411,7 +411,7 @@ never left the container. It now takes the SMTP settings from
 cargo clippy --workspace --all-targets -- -D warnings
 
 # Tests (requires the DB running and seeded)
-DATABASE_URL=postgres://tavern:tavern@localhost:5432/tavern \
+DATABASE_URL=postgres://realmforge:realmforge@localhost:5432/realmforge \
   cargo test --workspace
 
 # Python lint

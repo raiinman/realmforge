@@ -1,0 +1,23 @@
+[package]
+name = "realmforge-gate-account-server"
+description = "Account management binary (replaces account.battle.net)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+realmforge-gate-core = { workspace = true }
+realmforge-gate-db = { workspace = true }
+realmforge-gate-account = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+realmforge-gate-observability = { workspace = true }
+anyhow = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
+tokio-rustls = { workspace = true }
