@@ -1,11 +1,11 @@
 use std::fmt;
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{ClientId, GateError, IdentitySubject, OidcSigningAuthority};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IdTokenClaims {
     pub iss: String,
     pub sub: String,
@@ -72,9 +72,7 @@ impl SignedIdToken {
         let signature = authority.sign_rs256(signing_input.as_bytes())?;
         let encoded_signature = URL_SAFE_NO_PAD.encode(signature);
 
-        Ok(Self(format!(
-            "{signing_input}.{encoded_signature}"
-        )))
+        Ok(Self(format!("{signing_input}.{encoded_signature}")))
     }
 
     pub fn expose(&self) -> &str {
