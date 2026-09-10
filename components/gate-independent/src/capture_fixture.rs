@@ -118,7 +118,11 @@ impl FixtureValidationError {
 
 impl fmt::Display for FixtureValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "capture fixture validation failed: {}", self.violations.join("; "))
+        write!(
+            f,
+            "capture fixture validation failed: {}",
+            self.violations.join("; ")
+        )
     }
 }
 
@@ -163,7 +167,11 @@ impl CaptureManifest {
         );
         validate_nonempty("os", &self.os, &mut violations);
         validate_nonempty("network_topology", &self.network_topology, &mut violations);
-        validate_nonempty("server_under_test", &self.server_under_test, &mut violations);
+        validate_nonempty(
+            "server_under_test",
+            &self.server_under_test,
+            &mut violations,
+        );
         validate_nonempty("server_revision", &self.server_revision, &mut violations);
         validate_nonempty("scenario", &self.scenario, &mut violations);
         validate_nonempty("expected_result", &self.expected_result, &mut violations);
@@ -210,7 +218,11 @@ impl CaptureManifest {
             }
             last_offset = Some(observation.offset_micros);
 
-            validate_nonempty("observation.operation", &observation.operation, &mut violations);
+            validate_nonempty(
+                "observation.operation",
+                &observation.operation,
+                &mut violations,
+            );
             if let Some(artifact_id) = observation.artifact_id.as_deref() {
                 if !artifact_ids.contains(artifact_id) {
                     violations.push(format!(
@@ -289,7 +301,9 @@ fn validate_token(field: &str, value: &str, violations: &mut Vec<String>) {
 
 fn validate_sha256(field: &str, value: &str, violations: &mut Vec<String>) {
     if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        violations.push(format!("{field} must be a 64-character hexadecimal SHA-256"));
+        violations.push(format!(
+            "{field} must be a 64-character hexadecimal SHA-256"
+        ));
     }
 }
 
@@ -299,7 +313,11 @@ fn validate_relative_path(value: &str, violations: &mut Vec<String>) {
         return;
     }
     let path = Path::new(value);
-    if path.is_absolute() || path.components().any(|component| matches!(component, std::path::Component::ParentDir)) {
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
         violations.push(format!(
             "artifact.relative_path must stay inside the capture bundle: {value}"
         ));
@@ -370,11 +388,7 @@ mod tests {
         manifest.evidence_grade = EvidenceGrade::Correlated;
         manifest.validate().unwrap();
         let error = manifest.ensure_implementation_ready().unwrap_err();
-        assert!(
-            error
-                .to_string()
-                .contains("must be first_party evidence")
-        );
+        assert!(error.to_string().contains("must be first_party evidence"));
     }
 
     #[test]
