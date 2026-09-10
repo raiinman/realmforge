@@ -1,0 +1,25 @@
+{
+  "schema": "realmforge.capture.v1",
+  "capture_id": "synthetic-ci-observer-001",
+  "captured_at_utc": "synthetic-ci-time",
+  "researcher": "realmforge-ci",
+  "client": {
+    "family": "synthetic",
+    "version": "0",
+    "build": 1,
+    "platform": "linux",
+    "architecture": "x86_64",
+    "executable_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "os": "GitHub Actions Ubuntu",
+  "network_topology": "loopback synthetic test",
+  "server_under_test": "realmforge-gate-observer",
+  "server_revision": "ci",
+  "scenario": "synthetic TCP observer smoke test",
+  "expected_result": "observer records synthetic bytes without assigning an application protocol",
+  "actual_result": "not yet observed",
+  "evidence_grade": "hypothesis",
+  "artifacts": [],
+  "observations": [],
+  "notes": "Synthetic CI fixture only. This is not target-client evidence."
+}
