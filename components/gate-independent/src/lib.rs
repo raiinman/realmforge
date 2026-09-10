@@ -6,6 +6,7 @@
 
 mod account;
 mod authorization_code;
+mod capture_fixture;
 mod error;
 mod http;
 mod identity;
@@ -25,6 +26,11 @@ pub use account::{
     AccountDirectory, AccountId, AccountRecord, AccountStatus, MemoryAccountDirectory,
 };
 pub use authorization_code::{AuthorizationCode, AuthorizationCodeStore};
+pub use capture_fixture::{
+    CAPTURE_FIXTURE_SCHEMA_V1, CaptureArtifact, CaptureManifest, CaptureObservation,
+    ClientDescriptor, EvidenceGrade, FixtureValidationError, ObservationDirection,
+    ObservationLayer, RedactionStatus,
+};
 pub use error::GateError;
 pub use http::{
     AccessTokenResponse, GATE_SESSION_COOKIE, GateHttpState, HealthResponse, gate_http_router,
