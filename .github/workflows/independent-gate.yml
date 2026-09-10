@@ -18,6 +18,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.target-independent-gate
     steps:
       - uses: actions/checkout@v4
       - name: Enforce independent source boundary
@@ -38,3 +40,34 @@ jobs:
         run: cargo +1.97.0 fmt --manifest-path components/gate-independent/Cargo.toml -- --check
       - name: Test independent Gate foundation
         run: cargo +1.97.0 test --manifest-path components/gate-independent/Cargo.toml
+      - name: Build standalone Gate process
+        run: cargo +1.97.0 build --manifest-path components/gate-independent/Cargo.toml --bin realmforge-gate
+      - name: Smoke standalone Gate HTTP surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          export REALMFORGE_GATE_BIND=127.0.0.1:18080
+          export REALMFORGE_GATE_ISSUER=http://127.0.0.1:18080
+          "$CARGO_TARGET_DIR/debug/realmforge-gate" > /tmp/realmforge-gate.log 2>&1 &
+          gate_pid=$!
+          cleanup() {
+            kill "$gate_pid" 2>/dev/null || true
+            wait "$gate_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health > /tmp/health.json; then
+              break
+            fi
+            sleep 0.2
+          done
+
+          grep -F '"status":"ok"' /tmp/health.json
+          grep -F '"service":"realmforge-gate"' /tmp/health.json
+
+          curl -fsS http://127.0.0.1:18080/.well-known/openid-configuration > /tmp/discovery.json
+          grep -F '"issuer":"http://127.0.0.1:18080"' /tmp/discovery.json
+          grep -F '"authorization_endpoint":"http://127.0.0.1:18080/authorize"' /tmp/discovery.json
+          grep -F '"token_endpoint":"http://127.0.0.1:18080/token"' /tmp/discovery.json
+          grep -F '"code_challenge_methods_supported":["S256"]' /tmp/discovery.json

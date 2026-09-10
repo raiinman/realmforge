@@ -7,6 +7,7 @@
 mod account;
 mod authorization_code;
 mod error;
+mod http;
 mod identity;
 mod oauth;
 mod oauth_client;
@@ -20,6 +21,7 @@ pub use account::{
 };
 pub use authorization_code::{AuthorizationCode, AuthorizationCodeStore};
 pub use error::GateError;
+pub use http::{HealthResponse, gate_http_router};
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
 pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
 pub use oauth_client::{OAuthClient, OAuthClientRegistry};
