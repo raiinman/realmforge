@@ -3,7 +3,8 @@
 **Repository:** `raiinman/realmforge`  
 **Main authority:** `main`  
 **Active rebuild branch:** `rebuild/realmforge-gate-foundation`  
-**Current phase:** D0 authority continues in parallel with the first bounded Gate rebuild  
+**Open PR:** `#1` — first Realmforge Gate rebuild slice  
+**Current phase:** D0 authority continues in parallel with the bounded Gate rebuild  
 **Last updated:** 2026-09-09
 
 ## Read first
@@ -17,10 +18,11 @@ Before acting, read in this order:
 5. `docs/REALMFORGE_REBUILD_PLAN.md`
 6. `docs/LEGAL_AND_SOURCE_BOUNDARY.md`
 7. `components/gate/REALMFORGE_DERIVATION.md`
-8. `docs/reconstruction/TAVERN_EXIT_LEDGER.md`
-9. `docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`
-10. `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md`
-11. `docs/ROADMAP.md`
+8. `components/gate/REALMFORGE_CONFIG.md`
+9. `docs/reconstruction/TAVERN_EXIT_LEDGER.md`
+10. `docs/research/COMPATIBILITY_RESEARCH_CAMPAIGN.md`
+11. `docs/research/UPSTREAM_CAPABILITY_INVENTORY.md`
+12. `docs/ROADMAP.md`
 
 Do not replace repository authority with chat memory.
 
@@ -54,7 +56,7 @@ Pinned upstream:
 - commit: `6f9158670ee7666bfae2be58b291dafcb45f12e7`
 - license: `AGPL-3.0-only`
 
-The exact upstream snapshot is now imported and frozen at:
+The exact upstream snapshot is imported and frozen at:
 
 `third_party/gate-upstream/source/`
 
@@ -68,7 +70,7 @@ That directory is explicitly an **AGPL-3.0-only covered derivative**. Do not des
 
 ## Verified baseline
 
-The untouched imported snapshot has passed its reproducible CI baseline:
+The untouched imported snapshot passed its reproducible CI baseline:
 
 - account/oauth/BGS server build: PASS,
 - full workspace/all-target tests: PASS,
@@ -77,29 +79,53 @@ The untouched imported snapshot has passed its reproducible CI baseline:
 
 Baseline workflow run: `34436523285`.
 
-This proves the inherited implementation builds and passes its own tests. It does **not** prove real-client interoperability or establish Realmforge support for any client build.
+The baseline evidence report was repaired after its original shell heredoc mangled markdown backticks. The workflow generator itself is now quoting-safe.
+
+This baseline proves the inherited implementation builds and passes its own tests. It does **not** prove real-client interoperability or establish Realmforge support for any client build.
 
 ## RF-G1 — Realm registry boundary — COMPLETE
 
-The first actual Realmforge rebuild slice is implemented on `rebuild/realmforge-gate-foundation` and CI-green.
+The first actual Realmforge rebuild slice is CI-green.
 
-What changed in `components/gate`:
+Implemented in `components/gate`:
 
-- introduced `realmforge_realms::RealmRegistry`,
-- removed the hard-coded single `Tavern Realm` from realm-list/join behavior,
-- supports multiple Gate-side realm definitions,
-- realm display name/address/port are configurable,
-- exact build profiles exist for the inherited 31650 and 40618 hypotheses,
+- `realmforge_realms::RealmRegistry`,
+- hard-coded `Tavern Realm` removed from realm-list/join behavior,
+- multiple Gate-side realm definitions,
+- configurable realm display name/address/port,
+- exact build profiles for inherited 31650 and 40618 hypotheses,
 - unknown client builds fail closed by default,
-- an explicit research-only override exists for unknown builds,
-- realm-list payloads are projected from the registry,
-- realm-join resolves the selected realm from that registry,
-- Gate service/metric identity began moving from Tavern to Realmforge,
-- new registry/join regression tests pass,
-- full locked workspace tests pass,
-- the frozen upstream snapshot remains untouched.
+- explicit research-only unknown-build override,
+- realm-list payloads projected from the registry,
+- realm-join target resolved from the registry,
+- Gate service/metric identity began moving to Realmforge,
+- registry/join regression tests,
+- full locked workspace tests,
+- frozen upstream snapshot unchanged.
 
-Verified rebuild workflow run: `34437936703`.
+Verification run: `34437936703` — PASS.
+
+## RF-G3 — Gate configuration authority — ACTIVE
+
+The BGS process now has typed `realmforge_config::GateConfig` authority.
+
+Realmforge-facing settings now include:
+
+- `REALMFORGE_GATE_DATABASE_URL`,
+- `REALMFORGE_GATE_WS_BIND`,
+- `REALMFORGE_GATE_TCP_BIND`,
+- `REALMFORGE_GATE_MAX_LOGINS`,
+- `REALMFORGE_GATE_WORKER_THREADS`,
+- `REALMFORGE_GATE_TLS_CERT`,
+- `REALMFORGE_GATE_TLS_KEY`.
+
+Old inherited environment names remain migration aliases only. Realmforge-prefixed values win, legacy-alias use is logged, invalid listener/capacity/thread values fail at startup, and TLS certificate/key must be supplied as a pair.
+
+Configuration authority is documented in `components/gate/REALMFORGE_CONFIG.md`.
+
+Verification run: `34438409222` — PASS, including full locked workspace/all-target tests and proof the frozen upstream baseline stayed untouched.
+
+RF-G3 is **not complete**: DB-pool settings and the account/OAuth process configuration surfaces still need migration.
 
 ## Important inherited behavior still visible
 
@@ -113,7 +139,8 @@ Do not mistake these for final Realmforge policy:
 - world/realm-server authentication is still missing,
 - RestoreSession / MarkSessionAlive remain research gaps,
 - BGS v2 support remains conflicting evidence,
-- browser ticket SSO gaps remain open.
+- browser ticket SSO gaps remain open,
+- internal Tavern crate/package names remain throughout the covered derivative.
 
 ## What has NOT happened yet
 
@@ -134,13 +161,13 @@ Do not spend the next pass on a giant cosmetic rename.
 
 Advance the playable path in this order:
 
-1. repair and normalize baseline/rebuild evidence authority where needed,
-2. finish the Gate configuration surface around the new realm registry,
-3. investigate provenance of the upstream-referenced 1.13.2.31650 interoperability corpus,
-4. compare first emulator adapter candidates and close the adapter decision deliberately,
-5. specify Gate → Bridge/world-auth handoff semantics,
-6. build the first real-client capture fixture,
-7. then connect login → Realmforge realm list → join → emulator world authentication.
+1. investigate provenance of the upstream-referenced 1.13.2.31650 interoperability corpus,
+2. compare first emulator adapter candidates,
+3. close the first adapter decision deliberately,
+4. specify Gate → Bridge/world-auth handoff semantics,
+5. build the first real-client capture fixture,
+6. connect login → Realmforge realm list → join → emulator world authentication,
+7. continue account/OAuth configuration cleanup where it directly supports that path.
 
 RF-G2 product-visible identity cleanup may proceed alongside this work when it does not delay the vertical slice.
 
@@ -155,7 +182,7 @@ RF-G2 product-visible identity cleanup may proceed alongside this work when it d
 - Do not implement social/commerce fluff before client → realm gameplay works.
 - Do not pick Core/Forge/Client technology merely because Gate is currently Rust.
 - Do not select a project-wide license without owner approval.
-- Do not merge the active rebuild branch without owner approval.
+- Do not merge PR #1 or the active rebuild branch without owner approval.
 
 ## D0 completion target
 
