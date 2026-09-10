@@ -1,0 +1,137 @@
+name: Vendor pinned Gate upstream
+
+# One-shot intake workflow. It triggers only when this workflow file itself is
+# changed, so the generated vendor commit does not create an update loop.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/vendor-gate-upstream.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-gate-upstream
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPOSITORY: https://github.com/wowemulation-dev/tavern.git
+      UPSTREAM_COMMIT: 6f9158670ee7666bfae2be58b291dafcb45f12e7
+      VENDOR_ROOT: third_party/gate-upstream
+
+    steps:
+      - name: Check out Realmforge
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch exact upstream revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/realmforge-gate-upstream
+          git init -q /tmp/realmforge-gate-upstream
+          git -C /tmp/realmforge-gate-upstream remote add origin "$UPSTREAM_REPOSITORY"
+          git -C /tmp/realmforge-gate-upstream fetch --depth=1 origin "$UPSTREAM_COMMIT"
+          git -C /tmp/realmforge-gate-upstream checkout --detach -q FETCH_HEAD
+
+          ACTUAL="$(git -C /tmp/realmforge-gate-upstream rev-parse HEAD)"
+          test "$ACTUAL" = "$UPSTREAM_COMMIT"
+
+      - name: Create exact source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$VENDOR_ROOT/source"
+          mkdir -p "$VENDOR_ROOT/source"
+
+          # Preserve the pinned working tree exactly, except for Git's own
+          # repository metadata. Hidden files such as .sqlx are included.
+          rsync -a --delete --exclude='.git/' \
+            /tmp/realmforge-gate-upstream/ "$VENDOR_ROOT/source/"
+
+          # Keep the applicable license visible at the component boundary too.
+          cp "$VENDOR_ROOT/source/LICENSE.md" "$VENDOR_ROOT/LICENSE.md"
+
+          # Content-addressed manifest of every file in the pinned upstream
+          # commit. This lets later audits prove exactly what was imported.
+          {
+            echo "upstream_repository=$UPSTREAM_REPOSITORY"
+            echo "upstream_commit=$UPSTREAM_COMMIT"
+            echo "generated_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            git -C /tmp/realmforge-gate-upstream ls-tree -r --full-tree "$UPSTREAM_COMMIT"
+          } > "$VENDOR_ROOT/SNAPSHOT_MANIFEST.txt"
+
+          # Verify every tracked upstream path exists in the source snapshot.
+          missing=0
+          while IFS= read -r path; do
+            if [ ! -e "$VENDOR_ROOT/source/$path" ]; then
+              echo "Missing vendored path: $path" >&2
+              missing=1
+            fi
+          done < <(git -C /tmp/realmforge-gate-upstream ls-files)
+          test "$missing" -eq 0
+
+      - name: Mark provenance as imported
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path("third_party/gate-upstream")
+
+          rev = root / "SOURCE_REVISION"
+          text = rev.read_text(encoding="utf-8")
+          text = text.replace(
+              "source_snapshot_status=NOT_YET_IMPORTED",
+              "source_snapshot_status=IMPORTED_UNMODIFIED_BASELINE",
+          )
+          rev.write_text(text, encoding="utf-8")
+
+          provenance = root / "UPSTREAM.md"
+          text = provenance.read_text(encoding="utf-8")
+          text = text.replace(
+              "TAVERN-DERIVED / INTAKE-PENDING-SNAPSHOT",
+              "TAVERN-DERIVED / IMPORTED-UNMODIFIED-BASELINE",
+          )
+          text = text.replace(
+              "- no upstream source snapshot has yet been committed into this directory,\n- no upstream code has been modified inside Realmforge,\n- repository research/docs have been created independently around the future intake.\n\nWhen source intake occurs, change `replacement status` and append the exact import commit here.",
+              "- the exact pinned upstream working tree is vendored under `source/`, excluding only upstream `.git` metadata,\n- `SNAPSHOT_MANIFEST.txt` records the upstream Git object identity of every tracked file,\n- the snapshot is an unmodified baseline at intake,\n- no Realmforge integration modification has yet been made to the covered source.\n\nThe Git commit containing this snapshot is the repository history commit produced by `.github/workflows/vendor-gate-upstream.yml` immediately after the workflow trigger commit.",
+          )
+          provenance.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Record snapshot statistics
+        shell: bash
+        run: |
+          set -euo pipefail
+          tracked="$(git -C /tmp/realmforge-gate-upstream ls-files | wc -l | tr -d ' ')"
+          bytes="$(du -sb "$VENDOR_ROOT/source" | cut -f1)"
+          {
+            echo "tracked_files=$tracked"
+            echo "snapshot_bytes=$bytes"
+          } > "$VENDOR_ROOT/SNAPSHOT_STATS"
+          cat "$VENDOR_ROOT/SNAPSHOT_STATS"
+
+      - name: Commit vendored baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Intake Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VENDOR_ROOT"
+
+          if git diff --cached --quiet; then
+            echo "Pinned source snapshot is already current."
+            exit 0
+          fi
+
+          git commit -m "vendor pinned Gate upstream baseline"
+          git push origin HEAD:main
