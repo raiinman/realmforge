@@ -71,3 +71,15 @@ jobs:
           grep -F '"authorization_endpoint":"http://127.0.0.1:18080/authorize"' /tmp/discovery.json
           grep -F '"token_endpoint":"http://127.0.0.1:18080/token"' /tmp/discovery.json
           grep -F '"code_challenge_methods_supported":["S256"]' /tmp/discovery.json
+
+          authorize_status=$(curl -sS -o /tmp/authorize.json -w '%{http_code}' \
+            'http://127.0.0.1:18080/authorize?response_type=code&client_id=client-1&redirect_uri=https%3A%2F%2Fclient.example%2Fcallback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256')
+          test "$authorize_status" = "401"
+          grep -F '"error":"login_required"' /tmp/authorize.json
+
+          token_status=$(curl -sS -o /tmp/token.json -w '%{http_code}' \
+            -H 'content-type: application/x-www-form-urlencoded' \
+            --data 'grant_type=authorization_code&code=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&client_id=client-1&redirect_uri=https%3A%2F%2Fclient.example%2Fcallback&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk' \
+            http://127.0.0.1:18080/token)
+          test "$token_status" = "400"
+          grep -F '"error":"invalid_grant"' /tmp/token.json
