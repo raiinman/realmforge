@@ -1,0 +1,85 @@
+name: Realmforge Gate foundation refactor
+
+on:
+  push:
+    branches:
+      - rebuild/realmforge-gate-foundation
+    paths:
+      - .github/workflows/rebuild-gate-foundation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realmforge_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d realmforge_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/realmforge_gate
+      SQLX_OFFLINE: "true"
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Check out rebuild branch
+        uses: actions/checkout@v4
+        with:
+          ref: rebuild/realmforge-gate-foundation
+          fetch-depth: 0
+
+      - name: Install Rust 1.97
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.0 --profile minimal
+
+      - name: Apply deterministic Realmforge Gate refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/rebuild_gate_main.py
+          rustfmt +1.97.0 --edition 2024 \
+            components/gate/bin/bgs-server/src/main.rs \
+            components/gate/bin/bgs-server/src/game_utilities.rs \
+            components/gate/bin/bgs-server/src/realmforge_realms.rs
+
+      - name: Prove pinned baseline stayed untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- third_party/gate-upstream/source
+
+      - name: Verify Gate derivative
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd components/gate
+          cargo +1.97.0 test --locked -p bgs-server
+          cargo +1.97.0 test --locked --workspace --all-targets
+
+      - name: Commit verified refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Realmforge Build Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/gate/bin/bgs-server/src/main.rs \
+                  components/gate/bin/bgs-server/src/game_utilities.rs \
+                  components/gate/bin/bgs-server/src/realmforge_realms.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "route Gate realm list and join through Realmforge registry"
+          git push origin HEAD:rebuild/realmforge-gate-foundation
