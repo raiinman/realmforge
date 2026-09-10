@@ -38,6 +38,11 @@ pub enum GateError {
     AuthorizationGrantExpired,
     AuthorizationCodeNotFound,
     DuplicateAuthorizationCode,
+    InvalidAccessToken,
+    InvalidAccessTokenLifetime,
+    AccessTokenNotFound,
+    AccessTokenExpired,
+    DuplicateAccessToken,
     OAuthClientMismatch,
     OAuthRedirectMismatch,
     PkceVerificationFailed,
@@ -95,6 +100,11 @@ impl fmt::Display for GateError {
             Self::AuthorizationGrantExpired => write!(f, "authorization grant expired"),
             Self::AuthorizationCodeNotFound => write!(f, "authorization code not found"),
             Self::DuplicateAuthorizationCode => write!(f, "authorization code collision"),
+            Self::InvalidAccessToken => write!(f, "access token is malformed"),
+            Self::InvalidAccessTokenLifetime => write!(f, "access token lifetime is invalid"),
+            Self::AccessTokenNotFound => write!(f, "access token not found"),
+            Self::AccessTokenExpired => write!(f, "access token expired"),
+            Self::DuplicateAccessToken => write!(f, "access token collision"),
             Self::OAuthClientMismatch => {
                 write!(f, "OAuth client does not match authorization grant")
             }
