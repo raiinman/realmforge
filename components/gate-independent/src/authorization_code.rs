@@ -32,6 +32,10 @@ impl AuthorizationCode {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    pub(crate) fn digest(&self) -> [u8; 32] {
+        Sha256::digest(self.as_str().as_bytes()).into()
+    }
 }
 
 impl fmt::Debug for AuthorizationCode {
@@ -51,7 +55,7 @@ impl AuthorizationCodeStore {
             let mut bytes = [0u8; 32];
             OsRng.fill_bytes(&mut bytes);
             let code = AuthorizationCode::from_random_bytes(bytes);
-            let digest = code_digest(&code);
+            let digest = code.digest();
             if let std::collections::btree_map::Entry::Vacant(entry) = self.grants.entry(digest) {
                 entry.insert(grant);
                 return code;
@@ -67,7 +71,7 @@ impl AuthorizationCodeStore {
         redirect_uri: &RedirectUri,
         verifier: &PkceCodeVerifier,
     ) -> Result<IdentitySubject, GateError> {
-        let digest = code_digest(code);
+        let digest = code.digest();
         let result = self
             .grants
             .get_mut(&digest)
@@ -96,16 +100,12 @@ impl AuthorizationCodeStore {
         grant: AuthorizationGrant,
     ) -> Result<AuthorizationCode, GateError> {
         let code = AuthorizationCode::from_random_bytes(bytes);
-        let digest = code_digest(&code);
+        let digest = code.digest();
         if self.grants.insert(digest, grant).is_some() {
             return Err(GateError::DuplicateAuthorizationCode);
         }
         Ok(code)
     }
-}
-
-fn code_digest(code: &AuthorizationCode) -> [u8; 32] {
-    Sha256::digest(code.as_str().as_bytes()).into()
 }
 
 #[cfg(test)]
