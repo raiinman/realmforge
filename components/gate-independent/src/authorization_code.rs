@@ -6,7 +6,8 @@ use rand::{RngCore, rngs::OsRng};
 use sha2::{Digest, Sha256};
 
 use crate::{
-    AuthorizationGrant, ClientId, GateError, IdentitySubject, PkceCodeVerifier, RedirectUri,
+    AuthorizationGrant, ClientId, GateError, IdentitySubject, PkceCodeVerifier,
+    RedeemedAuthorizationGrant, RedirectUri,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -67,12 +68,25 @@ impl AuthorizationCodeStore {
         redirect_uri: &RedirectUri,
         verifier: &PkceCodeVerifier,
     ) -> Result<IdentitySubject, GateError> {
+        Ok(self
+            .redeem_full(code, now_unix, client_id, redirect_uri, verifier)?
+            .subject)
+    }
+
+    pub fn redeem_full(
+        &mut self,
+        code: &AuthorizationCode,
+        now_unix: u64,
+        client_id: &ClientId,
+        redirect_uri: &RedirectUri,
+        verifier: &PkceCodeVerifier,
+    ) -> Result<RedeemedAuthorizationGrant, GateError> {
         let digest = code_digest(code);
         let result = self
             .grants
             .get_mut(&digest)
             .ok_or(GateError::AuthorizationCodeNotFound)?
-            .redeem(now_unix, client_id, redirect_uri, verifier);
+            .redeem_full(now_unix, client_id, redirect_uri, verifier);
 
         if result.is_ok() {
             self.grants.remove(&digest);
@@ -111,7 +125,7 @@ fn code_digest(code: &AuthorizationCode) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdentitySubject, PkceS256Challenge};
+    use crate::{IdentitySubject, OidcAuthorizationContext, PkceS256Challenge};
 
     const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
@@ -174,6 +188,29 @@ mod tests {
                 .unwrap_err(),
             GateError::AuthorizationCodeNotFound
         );
+    }
+
+    #[test]
+    fn full_redemption_returns_oidc_context() {
+        let mut store = AuthorizationCodeStore::default();
+        let code = store
+            .issue_with_bytes(
+                [7; 32],
+                grant().with_oidc_context(OidcAuthorizationContext::new(Some(
+                    "nonce-1".to_owned(),
+                ))),
+            )
+            .unwrap();
+        let verifier = PkceCodeVerifier::new(VERIFIER).unwrap();
+        let client = ClientId::new("client-1").unwrap();
+        let redirect = RedirectUri::new("https://client.example/callback").unwrap();
+
+        let redeemed = store
+            .redeem_full(&code, 150, &client, &redirect, &verifier)
+            .unwrap();
+        assert_eq!(redeemed.client_id.as_str(), "client-1");
+        assert_eq!(redeemed.oidc.unwrap().nonce.as_deref(), Some("nonce-1"));
+        assert!(store.is_empty());
     }
 
     #[test]
