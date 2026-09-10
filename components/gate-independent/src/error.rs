@@ -80,7 +80,9 @@ impl fmt::Display for GateError {
             }
             Self::AuthorizationGrantConsumed => write!(f, "authorization grant was already used"),
             Self::AuthorizationGrantExpired => write!(f, "authorization grant expired"),
-            Self::OAuthClientMismatch => write!(f, "OAuth client does not match authorization grant"),
+            Self::OAuthClientMismatch => {
+                write!(f, "OAuth client does not match authorization grant")
+            }
             Self::OAuthRedirectMismatch => {
                 write!(f, "redirect URI does not match authorization grant")
             }
