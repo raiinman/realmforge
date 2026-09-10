@@ -94,5 +94,7 @@ jobs:
                   components/gate/bin/bgs-server/src/realmforge_realms.rs
           git diff --cached --quiet && exit 0
           git commit -m "route Gate realm list and join through Realmforge registry"
-          git pull --rebase origin rebuild/realmforge-gate-foundation
+          # This workflow is the only writer while it runs. Do not rebase here:
+          # rustfmt can leave unrelated unstaged formatting differences, and a
+          # rebase would reject the otherwise verified staged commit.
           git push origin HEAD:rebuild/realmforge-gate-foundation
