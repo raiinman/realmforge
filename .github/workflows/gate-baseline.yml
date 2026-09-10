@@ -1,7 +1,8 @@
 name: Verify vendored Gate baseline
 
 # One-shot baseline verification. Changing this workflow deliberately triggers
-# a new baseline run; the evidence commit itself does not retrigger the job.
+# a new baseline run on main; rebuild branches may safely repair the workflow
+# without re-running the historical baseline.
 on:
   push:
     branches: [main]
@@ -68,7 +69,6 @@ jobs:
           test -f third_party/gate-upstream/SNAPSHOT_MANIFEST.txt
           test -f third_party/gate-upstream/SNAPSHOT_STATS
 
-          # Baseline verification must not begin from locally modified vendor code.
           git diff --exit-code -- "$SOURCE_DIR"
 
       - name: Wait for PostgreSQL
@@ -111,8 +111,6 @@ jobs:
           echo "build_status=$build_status" >> "$GITHUB_OUTPUT"
           echo "test_status=$test_status" >> "$GITHUB_OUTPUT"
           echo "db_status=$db_status" >> "$GITHUB_OUTPUT"
-
-          # Do not fail yet; first commit the evidence even if the baseline is broken.
           exit 0
 
       - name: Prove baseline run did not modify vendored source
@@ -135,23 +133,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          rust_version="$(rustc --version)"
-          cargo_version="$(cargo --version)"
-          postgres_version="$(psql --version)"
-          kernel="$(uname -a)"
-          tracked_files="$(cut -d= -f2 < <(grep '^tracked_files=' third_party/gate-upstream/SNAPSHOT_STATS))"
-          snapshot_bytes="$(cut -d= -f2 < <(grep '^snapshot_bytes=' third_party/gate-upstream/SNAPSHOT_STATS))"
+          export RUST_VERSION="$(rustc --version)"
+          export CARGO_VERSION="$(cargo --version)"
+          export POSTGRES_VERSION="$(psql --version)"
+          export KERNEL_VERSION="$(uname -a)"
+          export TRACKED_FILES="$(cut -d= -f2 < <(grep '^tracked_files=' third_party/gate-upstream/SNAPSHOT_STATS))"
+          export SNAPSHOT_BYTES="$(cut -d= -f2 < <(grep '^snapshot_bytes=' third_party/gate-upstream/SNAPSHOT_STATS))"
 
           if [ "$BUILD_STATUS" -eq 0 ] && [ "$TEST_STATUS" -eq 0 ] && [ "$DB_STATUS" -eq 0 ] && [ "$VENDOR_DIFF_STATUS" -eq 0 ]; then
-            overall="PASS"
+            export OVERALL="PASS"
           else
-            overall="FAIL"
+            export OVERALL="FAIL"
           fi
 
-          cat > docs/evidence/GATE_BASELINE_2026-09-09.md <<EOF
-          # Gate Vendored Baseline — 2026-09-09
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
 
-          **Status:** $overall  
+          def result(code: str) -> str:
+              return "PASS" if code == "0" else "FAIL"
+
+          report = f'''# Gate Vendored Baseline — 2026-09-09
+
+          **Status:** {os.environ["OVERALL"]}  
           **Purpose:** Establish the untouched imported compatibility implementation as a reproducible regression baseline before Realmforge modifies it.
 
           ## Provenance
@@ -159,23 +163,23 @@ jobs:
           | Field | Value |
           |---|---|
           | Upstream | `wowemulation-dev/tavern` |
-          | Upstream commit | `$UPSTREAM_COMMIT` |
-          | Realmforge workflow trigger | `$GITHUB_SHA` |
-          | Vendored tracked files | `$tracked_files` |
-          | Vendored snapshot bytes | `$snapshot_bytes` |
-          | Rust | `$rust_version` |
-          | Cargo | `$cargo_version` |
-          | PostgreSQL client | `$postgres_version` |
-          | Runner | `$kernel` |
+          | Upstream commit | `{os.environ["UPSTREAM_COMMIT"]}` |
+          | Realmforge workflow trigger | `{os.environ["GITHUB_SHA"]}` |
+          | Vendored tracked files | `{os.environ["TRACKED_FILES"]}` |
+          | Vendored snapshot bytes | `{os.environ["SNAPSHOT_BYTES"]}` |
+          | Rust | `{os.environ["RUST_VERSION"]}` |
+          | Cargo | `{os.environ["CARGO_VERSION"]}` |
+          | PostgreSQL client | `{os.environ["POSTGRES_VERSION"]}` |
+          | Runner | `{os.environ["KERNEL_VERSION"]}` |
 
           ## Results
 
           | Gate | Exit code | Result |
           |---|---:|---|
-          | Build account/oauth/BGS servers | `$BUILD_STATUS` | $([ "$BUILD_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
-          | Full workspace/all-target test suite | `$TEST_STATUS` | $([ "$TEST_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
-          | Explicit DB migration round-trip smoke | `$DB_STATUS` | $([ "$DB_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
-          | Vendored source unchanged by verification | `$VENDOR_DIFF_STATUS` | $([ "$VENDOR_DIFF_STATUS" -eq 0 ] && echo PASS || echo FAIL) |
+          | Build account/oauth/BGS servers | `{os.environ["BUILD_STATUS"]}` | {result(os.environ["BUILD_STATUS"])} |
+          | Full workspace/all-target test suite | `{os.environ["TEST_STATUS"]}` | {result(os.environ["TEST_STATUS"])} |
+          | Explicit DB migration round-trip smoke | `{os.environ["DB_STATUS"]}` | {result(os.environ["DB_STATUS"])} |
+          | Vendored source unchanged by verification | `{os.environ["VENDOR_DIFF_STATUS"]}` | {result(os.environ["VENDOR_DIFF_STATUS"])} |
 
           ## Evidence logs
 
@@ -197,7 +201,10 @@ jobs:
           The verification workflow intentionally performs no source edits under `third_party/gate-upstream/source/`.
 
           `vendor-diff` must remain zero for this report to qualify as an untouched baseline.
-          EOF
+          '''
+
+          Path("docs/evidence/GATE_BASELINE_2026-09-09.md").write_text(report)
+          PY
 
       - name: Commit baseline evidence
         shell: bash
