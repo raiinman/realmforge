@@ -46,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           rustup toolchain install 1.97.0 --profile minimal
+          rustup component add rustfmt --toolchain 1.97.0
 
       - name: Apply deterministic Realmforge Gate refactor
         shell: bash
