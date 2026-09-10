@@ -17,6 +17,18 @@ impl AuthorizationCode {
         Self(URL_SAFE_NO_PAD.encode(bytes))
     }
 
+    pub fn parse(value: impl Into<String>) -> Result<Self, GateError> {
+        let value = value.into();
+        if value.len() != 43
+            || !value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+        {
+            return Err(GateError::InvalidAuthorizationCode);
+        }
+        Ok(Self(value))
+    }
+
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -122,6 +134,21 @@ mod tests {
         let code = store.issue_with_bytes([7; 32], grant()).unwrap();
         assert_eq!(format!("{code:?}"), "AuthorizationCode([REDACTED])");
         assert!(!code.as_str().is_empty());
+    }
+
+    #[test]
+    fn parser_accepts_issued_shape_and_rejects_garbage() {
+        let mut store = AuthorizationCodeStore::default();
+        let code = store.issue_with_bytes([7; 32], grant()).unwrap();
+        assert_eq!(AuthorizationCode::parse(code.as_str()).unwrap(), code);
+        assert_eq!(
+            AuthorizationCode::parse("short").unwrap_err(),
+            GateError::InvalidAuthorizationCode
+        );
+        assert_eq!(
+            AuthorizationCode::parse("!".repeat(43)).unwrap_err(),
+            GateError::InvalidAuthorizationCode
+        );
     }
 
     #[test]

@@ -11,9 +11,11 @@ mod http;
 mod identity;
 mod oauth;
 mod oauth_client;
+mod oauth_service;
 mod oidc;
 mod realm;
 mod session;
+mod token;
 mod world_auth;
 
 pub use account::{
@@ -25,7 +27,11 @@ pub use http::{HealthResponse, gate_http_router};
 pub use identity::{GameAccountId, GameAccountProjection, IdentitySubject};
 pub use oauth::{AuthorizationGrant, ClientId, PkceCodeVerifier, PkceS256Challenge, RedirectUri};
 pub use oauth_client::{OAuthClient, OAuthClientRegistry};
+pub use oauth_service::{
+    AuthorizationRequest, AuthorizationResult, OAuthService, TokenExchangeRequest, TokenResponse,
+};
 pub use oidc::{Issuer, ProviderMetadata};
 pub use realm::{ClientBuild, RealmCatalog, RealmDescriptor, RealmEndpoint, RealmId};
 pub use session::{GateSession, SessionId, SessionRegistry, SessionState};
+pub use token::{AccessToken, AccessTokenRecord, AccessTokenStore};
 pub use world_auth::{WorldAuthBridge, WorldAuthGrant, WorldAuthRequest};
