@@ -35,10 +35,12 @@ pub struct ProviderMetadata {
     pub authorization_endpoint: String,
     pub token_endpoint: String,
     pub jwks_uri: String,
+    pub scopes_supported: Vec<String>,
     pub response_types_supported: Vec<String>,
     pub grant_types_supported: Vec<String>,
     pub subject_types_supported: Vec<String>,
     pub id_token_signing_alg_values_supported: Vec<String>,
+    pub token_endpoint_auth_methods_supported: Vec<String>,
     pub code_challenge_methods_supported: Vec<String>,
 }
 
@@ -49,10 +51,12 @@ impl ProviderMetadata {
             authorization_endpoint: issuer.endpoint("authorize"),
             token_endpoint: issuer.endpoint("token"),
             jwks_uri: issuer.endpoint("jwks.json"),
+            scopes_supported: vec!["openid".to_owned()],
             response_types_supported: vec!["code".to_owned()],
             grant_types_supported: vec!["authorization_code".to_owned()],
             subject_types_supported: vec!["public".to_owned()],
             id_token_signing_alg_values_supported: vec!["RS256".to_owned()],
+            token_endpoint_auth_methods_supported: vec!["none".to_owned()],
             code_challenge_methods_supported: vec!["S256".to_owned()],
         }
     }
@@ -76,9 +80,11 @@ mod tests {
             metadata.authorization_endpoint,
             "https://gate.realmforge.test/authorize"
         );
+        assert_eq!(metadata.scopes_supported, ["openid"]);
         assert_eq!(metadata.grant_types_supported, ["authorization_code"]);
         assert_eq!(metadata.code_challenge_methods_supported, ["S256"]);
         assert_eq!(metadata.response_types_supported, ["code"]);
+        assert_eq!(metadata.token_endpoint_auth_methods_supported, ["none"]);
     }
 
     #[test]
@@ -92,6 +98,8 @@ mod tests {
             value["token_endpoint"],
             "https://gate.realmforge.test/token"
         );
+        assert_eq!(value["scopes_supported"][0], "openid");
+        assert_eq!(value["token_endpoint_auth_methods_supported"][0], "none");
         assert_eq!(value["code_challenge_methods_supported"][0], "S256");
     }
 }
